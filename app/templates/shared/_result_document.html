@@ -1,0 +1,76 @@
+{# shared/_result_document.html — the "official document" itself.
+   Included unmodified by both result_view.html (inside the app shell) and
+   result_print.html (standalone) so there is never drift between preview
+   and print/PDF output. Mock content for the frontend-only phase. #}
+
+<div class="result-sheet" id="resultSheetRoot">
+
+  <header class="result-sheet-header">
+    <div class="result-sheet-logo">
+      <img src="/static/images/school-logo-placeholder.png" alt="School logo" onerror="this.style.display='none'">
+    </div>
+    <div class="result-sheet-school-name">Greenfield Comprehensive College</div>
+    <div class="result-sheet-school-meta">12 Adeyemi Close, Lagos, Nigeria &middot; RC 0000000</div>
+    <div class="result-sheet-title-rule"></div>
+    <div class="result-sheet-doc-title">STUDENT TERMINAL REPORT SHEET</div>
+    <div class="result-sheet-term-line">First Term &mdash; 2025/2026 Session</div>
+  </header>
+
+  <section class="result-sheet-studentinfo">
+    <div><span class="label">Student Name</span><span class="value">Funmilayo Bello</span></div>
+    <div><span class="label">Admission No.</span><span class="value">STU/2024/0088</span></div>
+    <div><span class="label">Class</span><span class="value">JSS3 A</span></div>
+    <div><span class="label">Position in Class</span><span class="value">1st of 25</span></div>
+    <div><span class="label">Gender</span><span class="value">Female</span></div>
+    <div><span class="label">Days Present</span><span class="value">58 / 60</span></div>
+  </section>
+
+  <table class="result-sheet-table">
+    <thead>
+      <tr>
+        <th class="align-left">Subject</th>
+        <th>CA1<br><span class="max">/15</span></th>
+        <th>CA2<br><span class="max">/15</span></th>
+        <th>CA3<br><span class="max">/10</span></th>
+        <th>CA Total<br><span class="max">/40</span></th>
+        <th>Exam<br><span class="max">/60</span></th>
+        <th>Total<br><span class="max">/100</span></th>
+        <th>Grade</th>
+        <th class="align-left">Remark</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="align-left">Mathematics</td><td>14</td><td>13</td><td>9</td><td>36</td><td>54</td><td>90</td><td>A</td><td class="align-left">Excellent</td></tr>
+      <tr><td class="align-left">English Language</td><td>13</td><td>14</td><td>8</td><td>35</td><td>51</td><td>86</td><td>A</td><td class="align-left">Excellent</td></tr>
+      <tr><td class="align-left">Basic Science</td><td>12</td><td>12</td><td>9</td><td>33</td><td>50</td><td>83</td><td>A</td><td class="align-left">Excellent</td></tr>
+      <tr><td class="align-left">Social Studies</td><td>13</td><td>11</td><td>7</td><td>31</td><td>49</td><td>80</td><td>B</td><td class="align-left">Very Good</td></tr>
+      <tr><td class="align-left">Agricultural Science</td><td>12</td><td>13</td><td>8</td><td>33</td><td>48</td><td>81</td><td>B</td><td class="align-left">Very Good</td></tr>
+      <tr><td class="align-left">Civic Education</td><td>14</td><td>14</td><td>10</td><td>38</td><td>52</td><td>90</td><td>A</td><td class="align-left">Excellent</td></tr>
+    </tbody>
+  </table>
+
+  <section class="result-sheet-summary">
+    <div><span class="label">Cumulative Total</span><span class="value">510 / 600</span></div>
+    <div><span class="label">Average</span><span class="value">85.0%</span></div>
+    <div><span class="label">Overall Grade</span><span class="value">A</span></div>
+    <div><span class="label">Class Position</span><span class="value">1st of 25</span></div>
+  </section>
+
+  <section class="result-sheet-remarks">
+    <div class="remark-block">
+      <div class="label">Class Teacher's Remark</div>
+      <div class="remark-text">A brilliant and consistent result this term. Keep up the excellent work, Funmilayo.</div>
+      <div class="signature-line">Name &amp; Signature</div>
+    </div>
+    <div class="remark-block">
+      <div class="label">Principal's Remark</div>
+      <div class="remark-text">An outstanding performance. Well done.</div>
+      <div class="signature-line">Name &amp; Signature</div>
+    </div>
+  </section>
+
+  <footer class="result-sheet-footer">
+    Generated on 15 July, 2026 &middot; Greenfield Comprehensive College Result Management System
+  </footer>
+
+</div>

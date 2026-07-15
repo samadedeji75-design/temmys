@@ -1,0 +1,35 @@
+{% extends "shared/base.html" %}
+{% set role = 'student' %}
+{% set active_page = 'dashboard' %}
+{% set page_title = 'Dashboard' %}
+{% block title %}Dashboard — Parent Portal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<div class="student-identity-header">
+  <div class="student-identity-avatar" id="studentAvatarInitial">—</div>
+  <div>
+    <div class="student-identity-name" id="studentNameLabel">—</div>
+    <div class="student-identity-meta" id="studentMetaLabel">—</div>
+  </div>
+</div>
+
+<h2 style="font-size: var(--font-size-lg); color: var(--color-text); margin-bottom: var(--space-4);">Result History</h2>
+
+<div class="term-card-grid" id="termCardGrid">
+  <!-- Cards rendered by portal.js from mock finalized-term data -->
+</div>
+
+<div class="empty-state" id="portalEmptyState" style="display:none;">
+  <div class="empty-state-icon"><i class="bi bi-journal-x"></i></div>
+  <h3>No results yet</h3>
+  <p class="text-muted mb-0">Results will appear here once a term has been finalized by the school.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/portal/portal.js"></script>
+{% endblock %}

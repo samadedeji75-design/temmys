@@ -1,0 +1,8 @@
+<footer class="app-footer">
+  <span>&copy; {{ current_year }} {{ school_config.school_name }}</span>
+  <span>
+    {% if school_config.active_term and school_config.active_session %}
+      {{ school_config.active_session.name }} Session &middot; {{ school_config.active_term.name }}
+    {% endif %}
+  </span>
+</footer>

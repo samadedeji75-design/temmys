@@ -1,0 +1,32 @@
+{% extends "shared/base.html" %}
+{% set page_title = "Dashboard" %}
+{% block content %}
+  <h1 class="section-title">Admin Dashboard</h1>
+  <div class="d-flex gap-4 mb-5" style="flex-wrap: wrap;">
+    <div class="stat-tile">
+      <div class="stat-tile-icon"><i class="bi bi-mortarboard"></i></div>
+      <div>
+        <div class="stat-tile-value">{{ stats.total_students }}</div>
+        <div class="stat-tile-label">Active Students</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile-icon"><i class="bi bi-person-workspace"></i></div>
+      <div>
+        <div class="stat-tile-value">{{ stats.total_teachers }}</div>
+        <div class="stat-tile-label">Teachers</div>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-tile-icon"><i class="bi bi-check2-circle"></i></div>
+      <div>
+        <div class="stat-tile-value">{{ stats.active_term }}</div>
+        <div class="stat-tile-label">Active Term ({{ stats.active_session }})</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Recent Activity</h2></div>
+    <div class="card-body text-muted">Placeholder — recent activity feed goes here.</div>
+  </div>
+{% endblock %}

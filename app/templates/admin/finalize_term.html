@@ -1,0 +1,64 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'finalize_term' %}
+{% set page_title = 'Finalize Term' %}
+{% block title %}Finalize Term — School Result Management System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-4">
+  <div>
+    <h1 class="page-title mb-0">Finalize Term</h1>
+    <p class="text-muted mb-0">First Term — 2025/2026 Session</p>
+  </div>
+  <span class="badge badge-info" id="pollingIndicator"><i class="bi bi-arrow-repeat"></i> Live status</span>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-wrapper">
+      <table class="data-table" id="finalizeTable">
+        <thead>
+          <tr>
+            <th>Class Arm</th>
+            <th>Students</th>
+            <th style="width: 220px;">Completion</th>
+            <th>Status</th>
+            <th style="width: 160px;"></th>
+          </tr>
+        </thead>
+        <tbody id="finalizeTableBody">
+          <!-- Rows rendered by finalize-term.js from mock completion data -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Override-with-warning modal, listing incomplete students -->
+<div class="modal-backdrop-custom" id="overrideModal">
+  <div class="modal-box" style="max-width: 520px;">
+    <div class="modal-box-header">
+      <h3 id="overrideModalTitle">Finalize with incomplete scores?</h3>
+      <button type="button" class="modal-box-close" aria-label="Close" id="overrideModalClose">&times;</button>
+    </div>
+    <div class="modal-box-body">
+      <div class="modal-box-icon-danger"><i class="bi bi-exclamation-triangle"></i></div>
+      <p id="overrideModalIntro">This class has students with missing scores. Finalizing now will lock the term for everyone, including these students:</p>
+      <div class="incomplete-list" id="incompleteList"></div>
+      <p class="text-sm mb-0" style="margin-top: var(--space-3);">Students with missing scores will show incomplete results on their portal.</p>
+    </div>
+    <div class="modal-box-footer">
+      <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmOverrideBtn">Finalize Anyway</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/finalize-term.js"></script>
+{% endblock %}

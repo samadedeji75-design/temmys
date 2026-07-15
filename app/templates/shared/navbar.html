@@ -1,0 +1,18 @@
+<header class="app-navbar">
+  <div class="navbar-left">
+    <button type="button" class="navbar-hamburger" id="sidebarToggle" aria-label="Toggle navigation">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="navbar-page-title">{{ page_title | default('Dashboard') }}</div>
+  </div>
+
+  <div class="navbar-right">
+    <div class="navbar-user">
+      <span class="navbar-user-name">{{ user.name if user is defined else 'User' }}</span>
+      <div class="avatar-initial">{{ user.initial if user is defined else 'U' }}</div>
+    </div>
+    <a href="{% if role == 'admin' %}{{ url_for('auth.admin_logout') }}{% elif role == 'teacher' %}{{ url_for('auth.teacher_logout') }}{% else %}{{ url_for('auth.portal_logout') }}{% endif %}" class="navbar-logout-icon" aria-label="Log out">
+      <i class="bi bi-box-arrow-right"></i>
+    </a>
+  </div>
+</header>

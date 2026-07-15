@@ -1,0 +1,60 @@
+{% extends "shared/base.html" %}
+{% set page_title = "School Settings" %}
+{% block content %}
+  <h1 class="section-title mb-4">School Settings</h1>
+
+  <div class="card mb-4">
+    <div class="card-header"><h2>School Details</h2></div>
+    <div class="card-body">
+      <form id="settingsForm">
+        <div class="d-flex gap-4 mb-4" style="flex-wrap: wrap; align-items: flex-start;">
+          <div>
+            <label class="form-label">Logo</label>
+            <div>
+              <img id="logoPreview" src="/static/images/logo.png" alt="Current logo"
+                   style="width: 96px; height: 96px; object-fit: contain; border: 1px solid var(--color-border); border-radius: 8px; display: block; margin-bottom: 8px;">
+              <input type="file" class="form-control" id="logoInput" accept=".png,.jpg,.jpeg,.svg">
+              <div class="text-muted text-sm mt-1">PNG, JPG, or SVG. Max 2MB.</div>
+            </div>
+          </div>
+
+          <div style="flex: 1; min-width: 260px;">
+            <div class="form-group mb-3">
+              <label class="form-label" for="schoolName">School Name <span class="required">*</span></label>
+              <input type="text" class="form-control" id="schoolName" required>
+            </div>
+            <div class="form-group mb-3">
+              <label class="form-label" for="motto">Motto / Tagline</label>
+              <input type="text" class="form-control" id="motto" placeholder="e.g. Excellence in Character and Learning">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" for="address">Address</label>
+          <input type="text" class="form-control" id="address">
+        </div>
+
+        <div class="d-flex gap-4" style="flex-wrap: wrap;">
+          <div class="form-group mb-3" style="flex: 1; min-width: 220px;">
+            <label class="form-label" for="phone">Phone</label>
+            <input type="text" class="form-control" id="phone">
+          </div>
+          <div class="form-group mb-3" style="flex: 1; min-width: 220px;">
+            <label class="form-label" for="email">Email</label>
+            <input type="email" class="form-control" id="email">
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="settingsSaveBtn">
+          <span class="btn-spinner" style="display:none;"></span>
+          <span class="btn-label">Save Settings</span>
+        </button>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="/static/js/admin/settings.js"></script>
+{% endblock %}

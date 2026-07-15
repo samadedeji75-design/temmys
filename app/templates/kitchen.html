@@ -1,0 +1,223 @@
+{% extends "shared/base.html" %}
+{% block title %}Kitchen Sink — Component QA{% endblock %}
+
+{% set role = 'admin' %}
+{% set active_page = 'dashboard' %}
+{% set page_title = 'Kitchen Sink — Component QA' %}
+{% set flashes = [('success', 'This is a success message — used after a save/create/update.'), ('info', 'This is an info message — general notices.')] %}
+
+{% block content %}
+
+  <div class="section-title">Stat tiles</div>
+  <div class="row g-3 mb-5">
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-tile-icon"><i class="bi bi-people"></i></div>
+        <div>
+          <div class="stat-tile-value">1,248</div>
+          <div class="stat-tile-label">Total Students</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-tile-icon"><i class="bi bi-person-badge"></i></div>
+        <div>
+          <div class="stat-tile-value">64</div>
+          <div class="stat-tile-label">Total Teachers</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-tile-icon"><i class="bi bi-diagram-3"></i></div>
+        <div>
+          <div class="stat-tile-value">18</div>
+          <div class="stat-tile-label">Active Classes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-tile-icon"><i class="bi bi-calendar3"></i></div>
+        <div>
+          <div class="stat-tile-value">Term 1</div>
+          <div class="stat-tile-label">2025/2026 Session</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Buttons</div>
+  <div class="card mb-5">
+    <div class="card-body d-flex align-center gap-3" style="flex-wrap: wrap;">
+      <button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Student</button>
+      <button class="btn btn-secondary">Cancel</button>
+      <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> Deactivate</button>
+      <button class="btn btn-danger">Delete permanently</button>
+      <button class="btn btn-link">Forgot password?</button>
+      <button class="btn btn-primary btn-sm">Small</button>
+      <button class="btn btn-secondary btn-icon" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+      <button class="btn btn-primary" id="loadingBtnDemo"><span class="btn-spinner" style="display:none;"></span><span class="btn-label">Save All</span></button>
+    </div>
+  </div>
+
+  <div class="section-title">Alerts</div>
+  <div class="card mb-5">
+    <div class="card-body">
+      <div class="alert alert-success"><i class="bi bi-check-circle"></i><span>Student record saved successfully.</span><button type="button" class="alert-close">&times;</button></div>
+      <div class="alert alert-danger"><i class="bi bi-exclamation-octagon"></i><span>Admission number already exists.</span><button type="button" class="alert-close">&times;</button></div>
+      <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i><span>3 students still have incomplete scores.</span><button type="button" class="alert-close">&times;</button></div>
+      <div class="alert alert-info"><i class="bi bi-info-circle"></i><span>Term is currently unlocked for editing.</span><button type="button" class="alert-close">&times;</button></div>
+    </div>
+  </div>
+
+  <div class="section-title">Badges</div>
+  <div class="card mb-5">
+    <div class="card-body d-flex gap-2" style="flex-wrap: wrap;">
+      <span class="badge badge-success">Active</span>
+      <span class="badge badge-danger">Inactive</span>
+      <span class="badge badge-warning">Pending</span>
+      <span class="badge badge-info">Finalized</span>
+      <span class="badge badge-neutral">Draft</span>
+    </div>
+  </div>
+
+  <div class="section-title">Form elements</div>
+  <div class="card mb-5">
+    <div class="card-body">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">Full Name <span class="required">*</span></label>
+            <input type="text" class="form-control" placeholder="e.g. Chidinma Eze">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Admission Number <span class="required">*</span></label>
+            <input type="text" class="form-control is-invalid" value="GHS/2024/018">
+            <div class="form-feedback invalid">This admission number is already in use.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Class Arm</label>
+            <select class="form-select">
+              <option>SS1 — Gold</option>
+              <option>SS1 — Diamond</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">Guardian Phone</label>
+            <input type="text" class="form-control is-valid" value="+234 803 555 0148">
+            <div class="form-feedback valid">Looks good.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Portal Password</label>
+            <div class="input-with-button">
+              <input type="text" class="form-control" value="gh-8x2k">
+              <button class="btn btn-secondary">Generate</button>
+            </div>
+            <div class="form-hint">Student/parent will use this with their admission number to log in.</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary">Save Student</button>
+        <button class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Data table</div>
+  <div class="card mb-5">
+    <div class="card-header">
+      <h3>Students — SS1 Gold</h3>
+      <button class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Student</button>
+    </div>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Admission No.</th>
+            <th>Class</th>
+            <th>Guardian</th>
+            <th>Status</th>
+            <th class="cell-numeric">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chidinma Eze</td>
+            <td class="cell-muted">GHS/2024/018</td>
+            <td>SS1 Gold</td>
+            <td>Mrs. Eze</td>
+            <td><span class="badge badge-success">Active</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-secondary btn-sm btn-icon" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-outline-danger btn-sm btn-icon" aria-label="Deactivate" id="demoDeleteBtn"><i class="bi bi-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>Tunde Bakare</td>
+            <td class="cell-muted">GHS/2024/019</td>
+            <td>SS1 Gold</td>
+            <td>Mr. Bakare</td>
+            <td><span class="badge badge-danger">Inactive</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-secondary btn-sm btn-icon" aria-label="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-outline-danger btn-sm btn-icon" aria-label="Deactivate"><i class="bi bi-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-title">Empty state</div>
+  <div class="card mb-5">
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+      <h3>No results published yet</h3>
+      <p class="text-muted">Your child's result for this term isn't published yet. Check back once it's finalized.</p>
+    </div>
+  </div>
+
+  <div class="section-title">Modal (confirm-destructive pattern)</div>
+  <div class="card mb-5">
+    <div class="card-body">
+      <p class="text-muted mb-0">Click the trash icon on the table row above — it opens the shared confirm modal below rather than a bare browser dialog.</p>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Demo-only wiring for this QA page — not representative of real page JS.
+  $("#loadingBtnDemo").on("click", function () {
+    const $btn = $(this);
+    $btn.prop("disabled", true).find(".btn-spinner").show();
+    setTimeout(function () {
+      $btn.prop("disabled", false).find(".btn-spinner").hide();
+      window.showToast("Scores saved successfully.", "success");
+    }, 1200);
+  });
+
+  $("#demoDeleteBtn").on("click", function () {
+    window.confirmAction({
+      title: "Deactivate this student?",
+      body: "Chidinma Eze will no longer be able to log in, and will be hidden from active class lists. This can be reversed later by an admin.",
+      confirmLabel: "Deactivate",
+      danger: true,
+      onConfirm: function () {
+        window.showToast("Student deactivated.", "success");
+      }
+    });
+  });
+</script>
+{% endblock %}

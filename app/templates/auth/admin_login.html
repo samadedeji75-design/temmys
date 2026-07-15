@@ -1,0 +1,60 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Login — {{ school_config.school_name }}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/auth.css">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body class="auth-page">
+
+  <div class="auth-card" id="authCard">
+    <div class="auth-brand">
+      <img src="{{ school_config.logo_path or '/static/images/logo.png' }}" alt="School logo">
+      <div class="auth-brand-school">{{ school_config.school_name }}</div>
+      <h1 class="auth-heading">Admin Sign In</h1>
+    </div>
+
+    <div class="auth-error-banner" id="authErrorBanner" hidden>
+      <i class="bi bi-exclamation-octagon"></i>
+      <span>Incorrect email or password. Please try again.</span>
+    </div>
+
+    <div class="auth-lockout-banner" id="authLockoutBanner" hidden>
+      <i class="bi bi-shield-exclamation"></i>
+      <span>Too many failed attempts. Please try again in 5 minutes.</span>
+    </div>
+
+    <form class="auth-form" id="authForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="fieldEmail">Email</label>
+        <input type="email" class="form-control" id="fieldEmail" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="fieldPassword">Password</label>
+        <input type="password" class="form-control" id="fieldPassword" required>
+      </div>
+
+      <div class="auth-options">
+        <a href="#" id="forgotPasswordLink">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="btn btn-primary auth-submit" id="authSubmitBtn">
+        <span class="btn-spinner" style="display:none;"></span>
+        <span class="btn-label">Sign in</span>
+      </button>
+    </form>
+
+    <div class="auth-footer-note">{{ school_config.school_name }} &middot; Result Management System</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="/static/js/base.js"></script>
+  <script src="/static/js/auth/auth-login.js" data-portal="admin"></script>
+</body>
+</html>

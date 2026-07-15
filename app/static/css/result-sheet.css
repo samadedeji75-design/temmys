@@ -1,0 +1,205 @@
+﻿/* result-sheet.css
+   Strict black-on-white "official document" styling. No navy fills, no
+   shadows, no colored backgrounds — navy is used ONLY for the school name
+   and rule lines, per design_specification.md section 5. Shared unmodified
+   between result_view.html (embedded document card) and result_print.html
+   (standalone print/PDF output) so the two never visually drift apart. */
+
+.result-sheet {
+  background: #FFFFFF;
+  color: #111111;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-6, 2.5rem) var(--space-6, 2.5rem);
+  font-family: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+}
+
+/* -- Header -------------------------------------------------------------- */
+.result-sheet-header {
+  text-align: center;
+  margin-bottom: var(--space-5, 1.5rem);
+}
+
+.result-sheet-logo img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.result-sheet-school-name {
+  font-family: "Georgia", serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary, #0B2E59);
+  letter-spacing: 0.01em;
+}
+
+.result-sheet-school-meta {
+  font-size: 0.8rem;
+  color: #444444;
+  margin-top: 2px;
+}
+
+.result-sheet-title-rule {
+  height: 2px;
+  background: var(--color-primary, #0B2E59);
+  margin: 0.85rem auto 0.75rem;
+  max-width: 260px;
+}
+
+.result-sheet-doc-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #111111;
+}
+
+.result-sheet-term-line {
+  font-size: 0.85rem;
+  color: #444444;
+  margin-top: 2px;
+}
+
+/* -- Student info block ---------------------------------------------------*/
+.result-sheet-studentinfo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem 1.5rem;
+  border-top: 1px solid #111111;
+  border-bottom: 1px solid #111111;
+  padding: 0.85rem 0;
+  margin-bottom: 1.5rem;
+}
+.result-sheet-studentinfo > div { display: flex; flex-direction: column; }
+.result-sheet-studentinfo .label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666666;
+}
+.result-sheet-studentinfo .value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111111;
+}
+
+/* -- Subject table --------------------------------------------------------*/
+.result-sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-sheet-table th,
+.result-sheet-table td {
+  border: 1px solid #999999;
+  padding: 0.45rem 0.55rem;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.result-sheet-table th {
+  background: #F5F5F5;
+  color: #111111;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.result-sheet-table th .max { font-weight: 400; text-transform: none; }
+
+.result-sheet-table td.align-left,
+.result-sheet-table th.align-left { text-align: left; }
+
+/* -- Summary block ----------------------------------------------------- */
+.result-sheet-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  border: 1px solid #111111;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.75rem;
+}
+.result-sheet-summary > div { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.result-sheet-summary .label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666666;
+}
+.result-sheet-summary .value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111111;
+  margin-top: 2px;
+}
+
+/* -- Remarks ------------------------------------------------------------ */
+.result-sheet-remarks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.remark-block .label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666666;
+  margin-bottom: 0.3rem;
+}
+.remark-block .remark-text {
+  font-size: 0.85rem;
+  color: #111111;
+  min-height: 2.4rem;
+  line-height: 1.4;
+}
+.remark-block .signature-line {
+  margin-top: 1.75rem;
+  border-top: 1px solid #111111;
+  padding-top: 0.25rem;
+  font-size: 0.68rem;
+  color: #666666;
+  text-align: center;
+}
+
+/* -- Footer --------------------------------------------------------------*/
+.result-sheet-footer {
+  text-align: center;
+  font-size: 0.68rem;
+  color: #888888;
+  border-top: 1px solid #cccccc;
+  padding-top: 0.75rem;
+}
+
+/* -- Responsive (result_view.html, embedded in the app shell) ------------*/
+@media (max-width: 640px) {
+  .result-sheet { padding: 1.5rem 1rem; }
+  .result-sheet-studentinfo { grid-template-columns: repeat(2, 1fr); }
+  .result-sheet-summary { grid-template-columns: repeat(2, 1fr); }
+  .result-sheet-remarks { grid-template-columns: 1fr; }
+  .result-sheet-table { font-size: 0.75rem; }
+}
+
+/* -- Print ---------------------------------------------------------------*/
+@media print {
+  @page { margin: 14mm; }
+
+  html, body { background: #FFFFFF !important; }
+
+  .result-sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: none !important;
+  }
+
+  .result-sheet-table { page-break-inside: auto; }
+  .result-sheet-table tr { page-break-inside: avoid; page-break-after: auto; }
+  .result-sheet-remarks { page-break-inside: avoid; }
+  .result-sheet-summary { page-break-inside: avoid; }
+}

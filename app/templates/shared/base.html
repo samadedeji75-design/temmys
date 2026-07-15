@@ -1,0 +1,60 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ school_config.school_name }}{% endblock %}</title>
+
+  <!-- Bootstrap 5 (grid + utilities only — components are re-themed in base.css) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+
+  <link rel="stylesheet" href="/static/css/base.css">
+  {% block extra_css %}{% endblock %}
+
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <link rel="icon" href="/static/images/favicon.ico">
+</head>
+<body>
+
+  <div class="flash-container" id="flashContainer">
+    {% include "shared/_flash_messages.html" %}
+  </div>
+
+  <div class="app-shell">
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    {% include "shared/sidebar.html" %}
+
+    <div class="app-main">
+      {% include "shared/navbar.html" %}
+
+      <main class="content-area">
+        {% block content %}{% endblock %}
+      </main>
+
+      {% include "shared/footer.html" %}
+    </div>
+  </div>
+
+  <!-- Shared confirm-destructive modal — used app-wide via window.confirmAction() -->
+  <div class="modal-backdrop-custom" id="sharedConfirmModal">
+    <div class="modal-box">
+      <div class="modal-box-header">
+        <h3>Are you sure?</h3>
+        <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-box-body">This action cannot be undone.</div>
+      <div class="modal-box-footer">
+        <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+        <button type="button" class="btn btn-danger js-confirm-action-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="/static/js/base.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

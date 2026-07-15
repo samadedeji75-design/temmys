@@ -1,0 +1,84 @@
+﻿<aside class="app-sidebar">
+  <div class="sidebar-brand">
+    <img src="{{ school_config.logo_path or '/static/images/logo.png' }}" alt="School logo">
+    <div>
+      <div class="sidebar-brand-name">{{ school_config.school_name }}</div>
+      <div class="sidebar-brand-role">
+        {% if role == 'admin' %}Admin{% elif role == 'teacher' %}Teacher{% else %}Parent / Student{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-term-indicator">
+    Current Term
+    <strong>
+      {% if school_config.active_term and school_config.active_session %}
+        {{ school_config.active_term.name }} &middot; {{ school_config.active_session.name }}
+      {% else %}
+        Not set
+      {% endif %}
+    </strong>
+  </div>
+
+  <ul class="sidebar-nav">
+    {% if role == 'admin' %}
+      <li class="sidebar-nav-section">Overview</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+        <i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('admin.settings') }}">
+        <i class="bi bi-gear"></i> School Settings</a></li>
+
+      <li class="sidebar-nav-section">Academic Setup</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'sessions_terms' %}active{% endif %}" href="{{ url_for('admin.sessions_terms') }}">
+        <i class="bi bi-calendar3"></i> Sessions &amp; Terms</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'classes' %}active{% endif %}" href="{{ url_for('admin.classes_list') }}">
+        <i class="bi bi-diagram-3"></i> Classes</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'subjects' %}active{% endif %}" href="{{ url_for('admin.subjects_list') }}">
+        <i class="bi bi-journal-bookmark"></i> Subjects</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'class_subjects' %}active{% endif %}" href="{{ url_for('admin.class_subjects') }}">
+        <i class="bi bi-journal-check"></i> Class Subjects</a></li>
+
+      <li class="sidebar-nav-section">People</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'students' %}active{% endif %}" href="{{ url_for('admin.students_list') }}">
+        <i class="bi bi-mortarboard"></i> Students</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'teachers' %}active{% endif %}" href="{{ url_for('admin.teachers_list') }}">
+        <i class="bi bi-person-workspace"></i> Teachers</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'assignments' %}active{% endif %}" href="{{ url_for('admin.teacher_assignments') }}">
+        <i class="bi bi-clipboard-check"></i> Assignments</a></li>
+
+      <li class="sidebar-nav-section">Results</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'grading_scale' %}active{% endif %}" href="{{ url_for('admin.grading_scale') }}">
+        <i class="bi bi-sliders"></i> Grading Scale</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'finalize_term' %}active{% endif %}" href="#">
+        <i class="bi bi-check2-circle"></i> Finalize Term</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'class_results' %}active{% endif %}" href="#">
+        <i class="bi bi-bar-chart"></i> Class Results</a></li>
+
+    {% elif role == 'teacher' %}
+      <li class="sidebar-nav-section">Overview</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('teacher.dashboard') }}">
+        <i class="bi bi-speedometer2"></i> Dashboard</a></li>
+
+      <li class="sidebar-nav-section">My Classes</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'score_entry' %}active{% endif %}" href="{{ url_for('teacher.dashboard') }}">
+        <i class="bi bi-pencil-square"></i> Score Entry</a></li>
+
+    {% else %}
+      <li class="sidebar-nav-section">Overview</li>
+      <li><a class="sidebar-nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="#">
+        <i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'results' %}active{% endif %}" href="#">
+        <i class="bi bi-file-earmark-text"></i> Results</a></li>
+    {% endif %}
+  </ul>
+
+  <div class="sidebar-footer-link">
+    {% if role == 'admin' %}
+      <a href="{{ url_for('auth.admin_logout') }}"><i class="bi bi-box-arrow-right"></i> Log out</a>
+    {% elif role == 'teacher' %}
+      <a href="{{ url_for('auth.teacher_logout') }}"><i class="bi bi-box-arrow-right"></i> Log out</a>
+    {% else %}
+      <a href="{{ url_for('auth.portal_logout') }}"><i class="bi bi-box-arrow-right"></i> Log out</a>
+    {% endif %}
+  </div>
+</aside>

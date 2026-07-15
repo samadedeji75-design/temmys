@@ -1,0 +1,93 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'teachers' %}
+{% set page_title = 'Teachers' %}
+{% block title %}Teachers — School Result Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-4">
+  <h1 class="page-title mb-0">Teachers</h1>
+  <button type="button" class="btn btn-primary" id="addTeacherBtn">
+    <i class="bi bi-person-plus"></i> Add Teacher
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-body">
+
+    <div class="filter-bar">
+      <div class="filter-search">
+        <i class="bi bi-search"></i>
+        <input type="text" class="form-control" id="teacherSearchInput" placeholder="Search by name or email…">
+      </div>
+
+      <div class="filter-select">
+        <select class="form-select" id="filterStatus">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      <button type="button" class="filter-clear" id="clearFiltersBtn">Clear filters</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table" id="teachersTable">
+        <thead>
+          <tr>
+            <th>Teacher</th>
+            <th>Email</th>
+            <th>Assignments</th>
+            <th>Status</th>
+            <th style="width: 60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="teachersTableBody"></tbody>
+      </table>
+
+      <div class="empty-state" id="teachersEmptyState" style="display:none;">
+        <div class="empty-state-icon"><i class="bi bi-person-workspace"></i></div>
+        <h3>No teachers found</h3>
+        <p class="text-muted mb-0">Try adjusting your search or filters, or add a new teacher to get started.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Row template, cloned by JS -->
+<template id="teacherRowTemplate">
+  <tr>
+    <td>
+      <div class="d-flex align-center gap-3">
+        <div class="avatar-initial" style="width:32px;height:32px;font-size:var(--font-size-xs);"></div>
+        <div class="teacher-name-cell" style="font-weight:600;"></div>
+      </div>
+    </td>
+    <td class="teacher-email-cell cell-muted"></td>
+    <td class="teacher-assignment-count-cell cell-muted"></td>
+    <td><span class="badge teacher-status-badge"></span></td>
+    <td>
+      <div class="row-actions-menu">
+        <button type="button" class="row-actions-trigger" aria-label="Row actions">
+          <i class="bi bi-three-dots-vertical"></i>
+        </button>
+        <div class="row-actions-dropdown">
+          <button type="button" class="js-edit-teacher"><i class="bi bi-pencil"></i> Edit</button>
+          <a href="#" class="js-manage-assignments"><i class="bi bi-diagram-3"></i> Manage Assignments</a>
+          <button type="button" class="js-reset-password"><i class="bi bi-key"></i> Reset Password</button>
+          <div class="divider"></div>
+          <button type="button" class="text-danger js-deactivate-teacher"><i class="bi bi-slash-circle"></i> Deactivate</button>
+        </div>
+      </div>
+    </td>
+  </tr>
+</template>
+
+{% include "admin/teacher_form.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/teachers.js"></script>
+{% endblock %}

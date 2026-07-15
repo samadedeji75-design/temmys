@@ -1,0 +1,52 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'class_results' %}
+{% set page_title = 'Class Result Overview' %}
+{% block title %}Class Result Overview — School Result Management System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-center gap-2 mb-4">
+  <a href="/admin/finalize-term" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Finalize Term</a>
+</div>
+
+<div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
+  <div>
+    <h1 class="page-title mb-0">Class Result Overview</h1>
+    <p class="text-muted mb-0">JSS3 A — First Term, 2025/2026 Session</p>
+  </div>
+  <button type="button" class="btn btn-primary" id="downloadBatchBtn">
+    <span class="btn-label"><i class="bi bi-file-earmark-pdf"></i> Download Class Result (Batch PDF)</span>
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-wrapper">
+      <table class="data-table" id="overviewTable">
+        <thead>
+          <tr>
+            <th style="width: 70px;">Position</th>
+            <th>Student</th>
+            <th>Admission No.</th>
+            <th class="cell-numeric">Cumulative Total</th>
+            <th class="cell-numeric">Average</th>
+            <th style="width: 90px;">Grade</th>
+            <th style="width: 130px;"></th>
+          </tr>
+        </thead>
+        <tbody id="overviewTableBody">
+          <!-- Rows rendered by finalize-term.js from mock computed results -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/finalize-term.js"></script>
+{% endblock %}

@@ -1,0 +1,75 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'teacher' %}
+{% set active_page = 'score_entry' %}
+{% set page_title = 'Score Entry' %}
+{% block title %}Score Entry — Teacher Portal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-center gap-2 mb-4">
+  <a href="{{ url_for('teacher.dashboard') }}" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
+  <div>
+    <h1 class="page-title mb-0">{{ class_name }} — {{ subject_name }}</h1>
+    <p class="text-muted mb-0" id="termLabel">
+      {% if school_config.active_term and school_config.active_session %}
+        {{ school_config.active_term.name }}, {{ school_config.active_session.name }}
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="locked-term-banner" id="lockedBanner" style="display:none;">
+  <i class="bi bi-lock-fill"></i>
+  <div>
+    <strong>This term has been finalized.</strong>
+    <div class="text-sm">Scores are read-only. Contact an administrator if a correction is needed.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="score-entry-wrapper">
+      <table class="score-table" id="scoreTable">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>CA1</th>
+            <th>CA2</th>
+            <th>CA3</th>
+            <th>Exam</th>
+            <th>CA Total</th>
+            <th>Subject Total</th>
+            <th>Grade</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="scoreTableBody">
+          <!-- Rows rendered by score-entry.js from /api/teacher/scores -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="score-entry-footer">
+      <div class="text-sm text-muted" id="saveStatusSummary">All scores saved.</div>
+      <button type="button" class="btn btn-primary" id="saveAllBtn">
+        <span class="btn-spinner" style="display:none;"></span>
+        <span class="btn-label"><i class="bi bi-check2-circle"></i> Save All</span>
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.SCORE_ENTRY_CLASS_ARM_ID = {{ class_arm_id }};
+  window.SCORE_ENTRY_SUBJECT_ID = {{ subject_id }};
+</script>
+<script src="/static/js/teacher/score-entry.js"></script>
+{% endblock %}

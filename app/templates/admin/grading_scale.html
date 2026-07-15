@@ -1,0 +1,68 @@
+﻿{% extends "shared/base.html" %}
+{% set page_title = "Grading Scale" %}
+{% block title %}Grading Scale — School Result Management System{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title mb-4">Grading Scale</h1>
+
+<div class="card">
+  <div class="card-body">
+
+    <div class="config-row">
+      <div class="form-group">
+        <label class="form-label" for="caMax">CA Max Score</label>
+        <input type="number" class="form-control" id="caMax" value="40" min="0" max="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="examMax">Exam Max Score</label>
+        <input type="number" class="form-control" id="examMax" value="60" min="0" max="100">
+      </div>
+      <div class="form-group" style="align-self:flex-end;">
+        <div class="text-sm" id="totalCheckLabel">Total: <strong>100</strong></div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-between align-center mb-3">
+      <h3 style="margin:0; font-size: var(--font-size-lg); color: var(--color-text);">Grade Bands</h3>
+      <button type="button" class="btn btn-secondary btn-sm" id="addGradeRowBtn">
+        <i class="bi bi-plus-lg"></i> Add Row
+      </button>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table" id="gradingTable">
+        <thead>
+          <tr>
+            <th style="width:120px;">Min Score</th>
+            <th style="width:120px;">Max Score</th>
+            <th style="width:120px;">Grade</th>
+            <th>Remark</th>
+            <th style="width:50px;"></th>
+          </tr>
+        </thead>
+        <tbody id="gradingTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-warning" id="gradingValidationAlert" style="display:none; margin-top: var(--space-4);">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div id="gradingValidationText"></div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-primary" id="saveGradingScaleBtn">
+        <span class="btn-label">Save Grading Scale</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/grading-scale.js"></script>
+{% endblock %}

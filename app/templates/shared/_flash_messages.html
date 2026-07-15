@@ -1,0 +1,15 @@
+﻿{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+        <i class="bi
+          {% if category == 'success' %}bi-check-circle
+          {% elif category in ['error', 'danger'] %}bi-exclamation-octagon
+          {% elif category == 'warning' %}bi-exclamation-triangle
+          {% else %}bi-info-circle{% endif %}"></i>
+        <span>{{ message }}</span>
+        <button type="button" class="alert-close" aria-label="Dismiss">&times;</button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}

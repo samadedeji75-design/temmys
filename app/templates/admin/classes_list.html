@@ -1,0 +1,28 @@
+﻿{% extends "shared/base.html" %}
+{% set page_title = "Classes" %}
+{% block content %}
+  <div class="d-flex justify-between align-center mb-4">
+    <h1 class="section-title mb-0">Classes</h1>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-secondary" id="addLevelBtn">
+        <i class="bi bi-plus-lg"></i> Add Level
+      </button>
+      <button type="button" class="btn btn-primary" id="addArmBtn">
+        <i class="bi bi-plus-lg"></i> Add Arm
+      </button>
+    </div>
+  </div>
+
+  <div id="classesGroups"><!-- rendered by classes.js: one card per level, arms as rows --></div>
+  <div class="empty-state" id="classesEmptyState" hidden>
+    <div class="empty-state-icon"><i class="bi bi-diagram-3"></i></div>
+    <h3>No classes yet</h3>
+    <p class="text-muted">Add a level (e.g. JSS 1) to get started.</p>
+  </div>
+
+  {% include "admin/class_form.html" %}
+{% endblock %}
+
+{% block extra_js %}
+  <script src="/static/js/admin/classes.js"></script>
+{% endblock %}

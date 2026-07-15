@@ -1,0 +1,16 @@
+﻿{# shared/_pagination.html — expects the including page to set up a container with id="paginationRoot"
+   and drive it via JS (no server pagination logic here, per the frontend-only phase). #}
+<nav class="pagination-bar" id="paginationRoot" aria-label="Pagination">
+  <div class="pagination-summary text-sm text-muted">
+    Showing <span id="paginationFrom">1</span>–<span id="paginationTo">10</span> of <span id="paginationTotal">0</span>
+  </div>
+  <div class="pagination-controls">
+    <button type="button" class="btn btn-secondary btn-sm" id="paginationPrev" disabled>
+      <i class="bi bi-chevron-left"></i> Prev
+    </button>
+    <div class="pagination-pages" id="paginationPages"></div>
+    <button type="button" class="btn btn-secondary btn-sm" id="paginationNext">
+      Next <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</nav>

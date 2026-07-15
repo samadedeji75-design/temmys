@@ -1,0 +1,79 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'students' %}
+{% set page_title = 'Import Students' %}
+{% block title %}Import Students — School Result Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex align-center gap-2 mb-4">
+  <a href="{{ url_for('admin.students_list') }}" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Students</a>
+</div>
+
+<div class="d-flex justify-between align-center mb-4">
+  <h1 class="page-title mb-0">Import Students</h1>
+  <a href="/static/templates/students_import_sample.csv" class="btn btn-secondary" download>
+    <i class="bi bi-download"></i> Download Sample Template
+  </a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <label class="import-dropzone" id="dropzone" for="csvFileInput">
+      <div class="import-dropzone-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+      <div style="font-weight:600; color: var(--color-text);">Drag and drop a CSV file here, or click to browse</div>
+      <div class="text-sm text-muted mt-2" style="margin-top: var(--space-2);">
+        Expected columns: admission_number, full_name, class_arm, gender, date_of_birth, guardian_name, guardian_phone, guardian_email
+      </div>
+      <input type="file" id="csvFileInput" accept=".csv">
+    </label>
+
+    <div class="d-flex align-center gap-3 mt-3" id="selectedFileRow" style="display:none; margin-top: var(--space-3);">
+      <div class="import-file-chip" id="fileChip">
+        <i class="bi bi-file-earmark-check"></i>
+        <span id="fileNameLabel"></span>
+        <button type="button" id="removeFileBtn" aria-label="Remove file">&times;</button>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-primary" id="confirmImportBtn" disabled>
+        <span class="btn-spinner" style="display:none;"></span>
+        <span class="btn-label"><i class="bi bi-upload"></i> Import</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="resultsSection" style="display:none;">
+  <div class="import-summary-bar" id="importSummaryBar"></div>
+
+  <div class="card" id="skippedCard" style="display:none;">
+    <div class="card-header">
+      <h3>Skipped Rows</h3>
+      <span class="text-sm text-muted">These rows were not imported — fix them in your CSV and re-upload if needed.</span>
+    </div>
+    <div class="card-body">
+      <div class="table-wrapper">
+        <table class="data-table" id="skippedTable">
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody id="skippedTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-muted">
+    Passwords were auto-generated for each imported student. Use "Reset Password" on the
+    <a href="{{ url_for('admin.students_list') }}">Students</a> page to retrieve or regenerate individual credentials.
+  </p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/students-import.js"></script>
+{% endblock %}

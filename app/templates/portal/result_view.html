@@ -1,0 +1,33 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'student' %}
+{% set active_page = 'results' %}
+{% set page_title = 'Result' %}
+{% block title %}Result — Funmilayo Bello{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/result-sheet.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-center gap-2 mb-4">
+  <a href="/portal/dashboard" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
+  <h1 class="page-title mb-0">First Term Result</h1>
+  <button type="button" class="btn btn-primary" id="downloadPdfBtn">
+    <span class="btn-label"><i class="bi bi-file-earmark-pdf"></i> Download PDF</span>
+  </button>
+</div>
+
+<!-- The white "document" card — content is the exact same include used by result_print.html,
+     so preview and print/PDF never drift apart. -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  {% include "shared/_result_document.html" %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/portal/portal.js"></script>
+{% endblock %}

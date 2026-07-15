@@ -1,0 +1,29 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Result — Funmilayo Bello</title>
+
+  <!-- base.css only for shared CSS custom properties (colors) — no navbar/sidebar/component
+       classes from it are used on this page. -->
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/result-sheet.css">
+
+  <style>
+    /* Print page has no app-shell, no sidebar, no navbar — just the document, centered. */
+    body {
+      background: #FFFFFF;
+      margin: 0;
+      padding: 2rem 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Identical include to result_view.html's embedded document card — guarantees
+       "no surprises between preview and PDF" per the design spec. -->
+  {% include "shared/_result_document.html" %}
+
+</body>
+</html>

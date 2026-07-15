@@ -1,0 +1,33 @@
+{% extends "shared/base.html" %}
+{% set role = 'teacher' %}
+{% set active_page = 'dashboard' %}
+{% set page_title = 'Dashboard' %}
+{% block title %}Dashboard — Teacher Portal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title mb-1">Welcome back</h1>
+<p class="text-muted mb-4">
+  {% if school_config.active_term and school_config.active_session %}
+    {{ school_config.active_term.name }} &middot; {{ school_config.active_session.name }}.
+  {% endif %}
+  Here are your assigned classes.
+</p>
+
+<div class="assignment-card-grid" id="teacherCardGrid">
+  <!-- Cards rendered by teacher-dashboard.js from /api/teacher/my-assignments -->
+</div>
+
+<div class="empty-state" id="dashboardEmptyState" style="display:none;">
+  <div class="empty-state-icon"><i class="bi bi-clipboard-x"></i></div>
+  <h3>No assignments yet</h3>
+  <p class="text-muted mb-0">Once the admin assigns you to a class and subject, it will show up here.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/teacher/teacher-dashboard.js"></script>
+{% endblock %}

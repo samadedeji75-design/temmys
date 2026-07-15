@@ -1,0 +1,40 @@
+﻿{% extends "shared/base.html" %}
+{% set page_title = "Class Subjects" %}
+{% block content %}
+  <h1 class="section-title">Class Subjects</h1>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="form-group mb-0">
+        <label class="form-label" for="classArmPicker">Select Class Arm</label>
+        <select class="form-select" id="classArmPicker" style="max-width: 320px;"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="subjectChecklistCard" hidden>
+    <div class="card-header">
+      <h2>Subjects for <span id="selectedArmLabel"></span></h2>
+      <span class="badge badge-info" id="selectedCountBadge">0 selected</span>
+    </div>
+    <div class="card-body">
+      <div id="subjectChecklist"><!-- rendered by class-subjects.js --></div>
+    </div>
+    <div class="form-actions" style="padding: 0 var(--space-5) var(--space-5);">
+      <button type="button" class="btn btn-primary" id="saveClassSubjectsBtn">
+        <span class="btn-spinner" style="display:none;"></span>
+        <span class="btn-label">Save</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="empty-state" id="noArmSelectedState">
+    <div class="empty-state-icon"><i class="bi bi-journal-check"></i></div>
+    <h3>Select a class arm above</h3>
+    <p class="text-muted">Choose a class arm to assign its subjects.</p>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="/static/js/admin/class-subjects.js"></script>
+{% endblock %}

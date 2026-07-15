@@ -1,0 +1,78 @@
+<!-- Add/Edit Student modal — included by students_list.html -->
+<div class="modal-backdrop-custom" id="studentModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 id="studentModalTitle">Add Student</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <form id="studentForm">
+      <div class="modal-box-body">
+        <input type="hidden" id="studentId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="admissionNumber">Admission Number <span class="required">*</span></label>
+            <input type="text" class="form-control" id="admissionNumber" required placeholder="e.g. STU/2026/0201">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="studentFullName">Full Name <span class="required">*</span></label>
+            <input type="text" class="form-control" id="studentFullName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="studentClassArm">Class <span class="required">*</span></label>
+            <select class="form-select" id="studentClassArm" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="studentGender">Gender</label>
+            <select class="form-select" id="studentGender">
+              <option value="">—</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="studentDob">Date of Birth</label>
+            <input type="date" class="form-control" id="studentDob">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="guardianName">Guardian Name</label>
+            <input type="text" class="form-control" id="guardianName">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="guardianPhone">Guardian Phone</label>
+            <input type="text" class="form-control" id="guardianPhone">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="guardianEmail">Guardian Email</label>
+            <input type="email" class="form-control" id="guardianEmail">
+          </div>
+        </div>
+      </div>
+      <div class="modal-box-footer">
+        <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="studentSaveBtn">
+          <span class="btn-spinner" style="display:none;"></span>
+          <span class="btn-label">Save Student</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Generated-password modal — shown once after create/reset, never persisted client-side -->
+<div class="modal-backdrop-custom" id="generatedPasswordModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3>Login Credentials Generated</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-box-body">
+      <p class="text-muted">Share this password with the student/guardian now — it will not be shown again.</p>
+      <div class="input-with-button">
+        <input type="text" class="form-control" id="generatedPasswordDisplay" readonly>
+      </div>
+    </div>
+    <div class="modal-box-footer">
+      <button type="button" class="btn btn-primary" data-modal-dismiss>Done</button>
+    </div>
+  </div>
+</div>

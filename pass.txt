@@ -1,0 +1,5 @@
+Admin login: admin@brightfuture.edu.ng / ChangeMe123!
+  Teacher login (sample): adaeze.okonkwo@brightfuture.edu.ng / Teacher123!
+  Student portal login (sample): BFS/1001 / Student123!
+
+

@@ -1,0 +1,109 @@
+﻿{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'students' %}
+{% set page_title = 'Students' %}
+{% block title %}Students — School Result Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-4">
+  <h1 class="section-title mb-0">Students</h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.students_import') }}" class="btn btn-secondary">
+      <i class="bi bi-upload"></i> Import CSV
+    </a>
+    <button type="button" class="btn btn-primary" id="addStudentBtn">
+      <i class="bi bi-plus-lg"></i> Add Student
+    </button>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="filter-bar">
+      <div class="filter-search">
+        <i class="bi bi-search"></i>
+        <input type="text" class="form-control" id="studentSearchInput" placeholder="Search by name or admission number…">
+      </div>
+
+      <div class="filter-select">
+        <select class="form-select" id="filterClassArm">
+          <option value="">All Classes</option>
+        </select>
+      </div>
+
+      <div class="filter-select">
+        <select class="form-select" id="filterStatus">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      <button type="button" class="filter-clear" id="clearFiltersBtn">Clear filters</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-wrapper">
+      <table class="data-table" id="studentsTable">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Admission No.</th>
+            <th>Class</th>
+            <th>Gender</th>
+            <th>Guardian Phone</th>
+            <th>Status</th>
+            <th style="width: 60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="studentsTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" id="studentsEmptyState" hidden>
+      <div class="empty-state-icon"><i class="bi bi-mortarboard"></i></div>
+      <h3>No students found</h3>
+      <p class="text-muted mb-0">Try adjusting your search or filters, or add a new student to get started.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Row template, cloned by JS -->
+<template id="studentRowTemplate">
+  <tr>
+    <td>
+      <div class="d-flex align-center gap-3">
+        <div class="avatar-initial" style="width:32px;height:32px;font-size:var(--font-size-xs);"></div>
+        <div class="student-name-cell" style="font-weight:600;"></div>
+      </div>
+    </td>
+    <td class="student-admission-cell cell-muted"></td>
+    <td class="student-class-cell"></td>
+    <td class="student-gender-cell cell-muted"></td>
+    <td class="student-guardian-cell cell-muted"></td>
+    <td><span class="badge student-status-badge"></span></td>
+    <td>
+      <div class="row-actions-menu">
+        <button type="button" class="row-actions-trigger" aria-label="Row actions">
+          <i class="bi bi-three-dots-vertical"></i>
+        </button>
+        <div class="row-actions-dropdown">
+          <button type="button" class="js-edit-student"><i class="bi bi-pencil"></i> Edit</button>
+          <button type="button" class="js-reset-password"><i class="bi bi-key"></i> Reset Password</button>
+          <div class="divider"></div>
+          <button type="button" class="text-danger js-deactivate-student"><i class="bi bi-slash-circle"></i> Deactivate</button>
+        </div>
+      </div>
+    </td>
+  </tr>
+</template>
+
+{% include "admin/student_form.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/students.js"></script>
+{% endblock %}

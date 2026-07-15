@@ -1,0 +1,120 @@
+﻿/* ==========================================================================
+   auth.css — Login pages (Admin / Teacher / Parent-Student)
+   Consumes tokens from base.css only — no new colors/spacing values defined.
+   ========================================================================== */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg);
+  padding: var(--space-5);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  padding: var(--space-6) var(--space-5);
+}
+
+@media (max-width: 575.98px) {
+  .auth-card { padding: var(--space-5) var(--space-4); }
+}
+
+.auth-card.shake { animation: auth-shake 0.5s ease; }
+
+@keyframes auth-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+.auth-brand { text-align: center; margin-bottom: var(--space-5); }
+
+.auth-brand img {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.auth-brand-school {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.auth-heading {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.auth-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  margin-bottom: 0;
+}
+
+.auth-error-banner,
+.auth-lockout-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid transparent;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+
+.auth-error-banner {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-left-color: var(--color-danger);
+}
+
+.auth-lockout-banner {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-left-color: var(--color-warning);
+}
+
+.auth-error-banner .bi,
+.auth-lockout-banner .bi { font-size: 1rem; margin-top: 1px; }
+
+.auth-form .form-group:last-of-type { margin-bottom: var(--space-3); }
+
+.auth-options {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+.auth-options a { font-size: var(--font-size-sm); font-weight: 600; }
+
+.auth-submit {
+  width: 100%;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+}
+
+.auth-submit .btn-spinner { margin-right: var(--space-1); }
+
+.auth-footer-note {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-5);
+}

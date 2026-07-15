@@ -1,0 +1,67 @@
+﻿{% extends "shared/base.html" %}
+{% set page_title = "Sessions & Terms" %}
+{% block content %}
+  <div class="d-flex justify-between align-center mb-4">
+    <h1 class="section-title mb-0">Sessions &amp; Terms</h1>
+    <button type="button" class="btn btn-primary" id="addSessionBtn">
+      <i class="bi bi-plus-lg"></i> Add Session
+    </button>
+  </div>
+
+  <div id="sessionsGroups"></div>
+
+  <!-- Add Session modal -->
+  <div class="modal-backdrop-custom" id="sessionModal">
+    <div class="modal-box">
+      <div class="modal-box-header">
+        <h3>Add Session</h3>
+        <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="sessionForm">
+        <div class="modal-box-body">
+          <div class="form-group mb-0">
+            <label class="form-label" for="sessionName">Session <span class="required">*</span></label>
+            <input type="text" class="form-control" id="sessionName" required placeholder="e.g. 2026/2027">
+          </div>
+        </div>
+        <div class="modal-box-footer">
+          <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+          <button type="submit" class="btn btn-primary" id="sessionSaveBtn">
+            <span class="btn-spinner" style="display:none;"></span>
+            <span class="btn-label">Save Session</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Term modal -->
+  <div class="modal-backdrop-custom" id="termModal">
+    <div class="modal-box">
+      <div class="modal-box-header">
+        <h3>Add Term</h3>
+        <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="termForm">
+        <div class="modal-box-body">
+          <input type="hidden" id="termSessionId">
+          <div class="form-group mb-0">
+            <label class="form-label" for="termName">Term Name <span class="required">*</span></label>
+            <input type="text" class="form-control" id="termName" required placeholder="e.g. 1st Term">
+          </div>
+        </div>
+        <div class="modal-box-footer">
+          <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+          <button type="submit" class="btn btn-primary" id="termSaveBtn">
+            <span class="btn-spinner" style="display:none;"></span>
+            <span class="btn-label">Save Term</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="/static/js/admin/sessions-terms.js"></script>
+{% endblock %}
