@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 9605fdc44d4a
+Revision ID: 614d0a6ec752
 Revises: 
-Create Date: 2026-07-14 21:48:31.643020
+Create Date: 2026-07-15 22:56:22.217997
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '9605fdc44d4a'
+revision = '614d0a6ec752'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -60,6 +60,7 @@ def upgrade():
     sa.Column('full_name', sa.String(length=150), nullable=False),
     sa.Column('email', sa.String(length=150), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('password_encrypted', sa.Text(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -78,9 +79,11 @@ def upgrade():
     sa.Column('name', sa.String(length=20), nullable=False),
     sa.Column('session_id', sa.Integer(), nullable=False),
     sa.Column('is_locked', sa.Boolean(), nullable=True),
+    sa.Column('order', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['session_id'], ['session.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name', 'session_id', name='uq_term_per_session')
+    sa.UniqueConstraint('name', 'session_id', name='uq_term_per_session'),
+    sa.UniqueConstraint('session_id', 'order', name='uq_term_order_per_session')
     )
     op.create_table('class_subject',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -96,6 +99,9 @@ def upgrade():
     sa.Column('school_name', sa.String(length=150), nullable=False),
     sa.Column('address', sa.String(length=255), nullable=True),
     sa.Column('logo_path', sa.String(length=255), nullable=True),
+    sa.Column('phone', sa.String(length=30), nullable=True),
+    sa.Column('email', sa.String(length=150), nullable=True),
+    sa.Column('motto', sa.String(length=200), nullable=True),
     sa.Column('ca_max_score', sa.Integer(), nullable=True),
     sa.Column('exam_max_score', sa.Integer(), nullable=True),
     sa.Column('active_session_id', sa.Integer(), nullable=True),
@@ -115,6 +121,7 @@ def upgrade():
     sa.Column('guardian_email', sa.String(length=150), nullable=True),
     sa.Column('class_arm_id', sa.Integer(), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('password_encrypted', sa.Text(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['class_arm_id'], ['class_arm.id'], ),

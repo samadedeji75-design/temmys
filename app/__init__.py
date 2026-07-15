@@ -19,6 +19,12 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
 
+    # Phase 8 hardening: cap request body size globally so no upload
+    # endpoint (CSV import, logo upload, or any future one) can be used
+    # for a memory-exhaustion DoS via an oversized payload. setdefault so
+    # it doesn't clobber a value your own config.py already sets.
+    app.config.setdefault("MAX_CONTENT_LENGTH", 8 * 1024 * 1024)  # 8MB
+
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
@@ -77,6 +83,10 @@ def create_app(config_name=None):
     @app.errorhandler(403)
     def forbidden_error(error):
         return render_template("errors/403.html"), 403
+
+    @app.errorhandler(413)
+    def payload_too_large_error(error):
+        return render_template("errors/generic.html"), 413
 
     @app.errorhandler(500)
     def internal_error(error):

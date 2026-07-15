@@ -2,6 +2,21 @@ import base64
 import hashlib
 from cryptography.fernet import Fernet
 from flask import current_app
+from werkzeug.security import check_password_hash, generate_password_hash
+
+
+# Fixed hash used purely to burn roughly the same amount of time as a real
+# check_password_hash() call, when the looked-up account doesn't exist.
+# Computed once per process — it's never compared against anything real,
+# just used to keep failed-login timing consistent regardless of whether
+# the email/admission number is registered.
+_DUMMY_PASSWORD_HASH = generate_password_hash("dummy-password-for-timing-parity")
+
+
+def dummy_password_check():
+    """Call this on the 'account not found' branch of a login so response
+    time doesn't reveal whether the email/admission number exists."""
+    check_password_hash(_DUMMY_PASSWORD_HASH, "irrelevant")
 
 
 def _get_fernet():

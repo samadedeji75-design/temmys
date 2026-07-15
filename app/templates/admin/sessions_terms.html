@@ -45,9 +45,18 @@
       <form id="termForm">
         <div class="modal-box-body">
           <input type="hidden" id="termSessionId">
-          <div class="form-group mb-0">
+          <div class="form-group mb-3">
             <label class="form-label" for="termName">Term Name <span class="required">*</span></label>
             <input type="text" class="form-control" id="termName" required placeholder="e.g. 1st Term">
+          </div>
+          <div class="form-group mb-0">
+            <label class="form-label" for="termOrder">Term Order <span class="required">*</span></label>
+            <select class="form-control" id="termOrder" required>
+              <option value="">Select...</option>
+              <option value="1">1st Term</option>
+              <option value="2">2nd Term</option>
+              <option value="3">3rd Term (triggers session cumulative)</option>
+            </select>
           </div>
         </div>
         <div class="modal-box-footer">

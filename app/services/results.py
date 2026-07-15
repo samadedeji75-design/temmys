@@ -17,6 +17,7 @@ from app.models import (
     GradingScale,
     SchoolConfig,
     StudentTermResult,
+    Term,
 )
 
 
@@ -91,10 +92,33 @@ def assign_positions(results):
 # 3.6 — finalizing a class arm (the write path)
 # ---------------------------------------------------------------------------
 
+def _get_finalized_result(student_id, term, sess):
+    """Returns the finalized StudentTermResult for this student/term/session,
+    or None if that term doesn't exist yet or was never finalized. Used by
+    third-term finalization to gather terms 1 and 2 for the session
+    cumulative — a missing/unfinalized term is excluded, not treated as 0."""
+    if term is None:
+        return None
+    return StudentTermResult.query.filter_by(
+        student_id=student_id, term_id=term.id, session_id=sess.id, status="finalized"
+    ).first()
+
+
 def finalize_class_arm(arm, term, sess):
     """Caller must have already verified required_subjects and students are
     both non-empty. Idempotent / re-runnable — recomputes from current Score
-    rows and overwrites any existing StudentTermResult rows."""
+    rows and overwrites any existing StudentTermResult rows.
+
+    Third-term behaviour (term.order == 3): the StudentTermResult row
+    written for this term stores the *whole-session* cumulative — first +
+    second + third term combined — in cumulative_total/cumulative_average,
+    with class_position ranked on that session-wide average, not just this
+    term's own figures. Terms 1 and 2 are unaffected: they keep storing
+    (and ranking on) that term's own total/average, exactly as before.
+    A student missing a finalized term 1 or 2 result has that term simply
+    excluded from the session average rather than counted as 0 — the
+    average is over whichever terms actually exist.
+    """
     required_subjects = get_required_subjects(arm)
     students = get_eligible_students(arm)
 
@@ -102,6 +126,58 @@ def finalize_class_arm(arm, term, sess):
     for student in students:
         total, average, grade = compute_student_totals(student, required_subjects, term, sess)
         computed.append((student, total, average, grade))
+
+    if term.order == 3:
+        term1 = Term.query.filter_by(session_id=sess.id, order=1).first()
+        term2 = Term.query.filter_by(session_id=sess.id, order=2).first()
+
+        session_rows = []  # (student, session_total, session_average, session_grade)
+        for student, total, average, grade in computed:
+            available_totals = []
+            available_averages = []
+
+            prior1 = _get_finalized_result(student.id, term1, sess)
+            if prior1:
+                available_totals.append(prior1.cumulative_total)
+                available_averages.append(prior1.cumulative_average)
+
+            prior2 = _get_finalized_result(student.id, term2, sess)
+            if prior2:
+                available_totals.append(prior2.cumulative_total)
+                available_averages.append(prior2.cumulative_average)
+
+            # This term's own just-computed figures always count.
+            available_totals.append(total)
+            available_averages.append(average)
+
+            session_total = round(sum(available_totals), 1)
+            session_average = round(sum(available_averages) / len(available_averages), 1)
+            session_grade_row = GradingScale.get_grade(session_average)
+            session_rows.append((
+                student, session_total, session_average,
+                session_grade_row.grade if session_grade_row else None,
+            ))
+
+        session_rows.sort(key=lambda row: row[2], reverse=True)  # rank by session average
+        ranked = assign_positions([(row[0], row[2]) for row in session_rows])
+        position_by_student = {s.id: pos for s, pos in ranked}
+
+        for student, session_total, session_average, session_grade in session_rows:
+            result = StudentTermResult.query.filter_by(
+                student_id=student.id, term_id=term.id, session_id=sess.id
+            ).first()
+            if not result:
+                result = StudentTermResult(student_id=student.id, term_id=term.id, session_id=sess.id)
+                db.session.add(result)
+            result.cumulative_total = session_total
+            result.cumulative_average = session_average
+            result.overall_grade = session_grade
+            result.class_position = position_by_student[student.id]
+            result.status = "finalized"
+            result.finalized_at = datetime.utcnow()
+
+        db.session.commit()
+        return computed
 
     computed.sort(key=lambda row: row[1], reverse=True)
     ranked = assign_positions([(row[0], row[1]) for row in computed])

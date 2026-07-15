@@ -38,16 +38,18 @@ $(function () {
       $card.append($header);
 
       const $body = $('<div class="table-wrapper"><table class="data-table"><thead><tr>' +
-        '<th>Term</th><th>Status</th><th>Lock</th><th></th></tr></thead><tbody></tbody></table></div>');
+        '<th>Term</th><th>Order</th><th>Status</th><th>Lock</th><th></th></tr></thead><tbody></tbody></table></div>');
       const $tbody = $body.find('tbody');
 
       if (sessionTerms.length === 0) {
-        $tbody.append('<tr><td colspan="4" class="cell-muted">No terms yet for this session.</td></tr>');
+        $tbody.append('<tr><td colspan="5" class="cell-muted">No terms yet for this session.</td></tr>');
       } else {
+        const orderLabels = { 1: '1st Term', 2: '2nd Term', 3: '3rd Term' };
         sessionTerms.forEach(function (term) {
           const $row = $(
             '<tr data-id="' + term.id + '">' +
               '<td>' + $('<div>').text(term.name).html() + '</td>' +
+              '<td>' + (orderLabels[term.order] || '—') + '</td>' +
               '<td>' + (term.active
                 ? '<span class="badge badge-success">Active</span>'
                 : '<span class="badge badge-neutral">Inactive</span>') + '</td>' +
@@ -87,6 +89,7 @@ $(function () {
   $(document).on('click', '.js-add-term', function () {
     $('#termSessionId').val($(this).data('session-id'));
     $('#termName').val('');
+    $('#termOrder').val('');
     window.openModal($('#termModal'));
   });
 
@@ -158,11 +161,12 @@ $(function () {
     e.preventDefault();
     const sessionId = Number($('#termSessionId').val());
     const name = $('#termName').val().trim();
-    if (!name) return;
+    const order = Number($('#termOrder').val());
+    if (!name || !order) return;
     const $btn = $('#termSaveBtn');
     $btn.prop('disabled', true).find('.btn-spinner').show();
 
-    window.apiRequest('POST', '/api/terms', { sessionId: sessionId, name: name })
+    window.apiRequest('POST', '/api/terms', { sessionId: sessionId, name: name, order: order })
       .done(function (response) {
         if (response && response.success) {
           loadSessions();

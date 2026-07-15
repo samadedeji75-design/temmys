@@ -40,7 +40,7 @@ def result_print(result_id):
 @portal_bp.route("/results/<int:result_id>/pdf")
 @portal_required
 def result_pdf(result_id):
-    from app.services.pdf import build_single_result_pdf
+    from app.services.pdf import build_single_result_pdf, safe_filename
 
     result = StudentTermResult.query.get_or_404(result_id)
     if result.student_id != session["studentonline"]:
@@ -49,5 +49,5 @@ def result_pdf(result_id):
         abort(404)
 
     pdf_buffer = build_single_result_pdf(result)
-    filename = f"{result.student.admission_number}_{result.term.name}_{result.session.name}.pdf".replace(" ", "_")
+    filename = safe_filename(f"{result.student.admission_number}_{result.term.name}_{result.session.name}.pdf")
     return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)

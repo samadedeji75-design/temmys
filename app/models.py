@@ -52,9 +52,11 @@ class Term(db.Model):
     name = db.Column(db.String(20), nullable=False)  # "First Term"
     session_id = db.Column(db.Integer, db.ForeignKey("session.id"), nullable=False)
     is_locked = db.Column(db.Boolean, default=False)  # blocks further edits + reveals to parents
+    order = db.Column(db.Integer, nullable=False)  # 1 / 2 / 3 — drives third-term cumulative logic in app/services/results.py
 
     __table_args__ = (
         db.UniqueConstraint("name", "session_id", name="uq_term_per_session"),
+        db.UniqueConstraint("session_id", "order", name="uq_term_order_per_session"),
     )
 
 

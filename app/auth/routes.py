@@ -2,6 +2,7 @@ from flask import render_template, redirect, url_for, jsonify, request, session
 
 from app.models import Admin, Teacher, Student
 from app.auth import auth_bp
+from app.services.security import dummy_password_check
 
 
 # ---------------------------------------------------------------------------
@@ -21,7 +22,14 @@ def admin_login():
     password = payload.get("password") or ""
 
     admin = Admin.query.filter_by(email=email).first()
-    if admin and admin.check_password(password):
+    if admin:
+        password_ok = admin.check_password(password)
+    else:
+        dummy_password_check()
+        password_ok = False
+
+    if admin and password_ok:
+        session.clear()
         session["adminonline"] = admin.id
         return jsonify({"success": True, "redirect_url": url_for("admin.dashboard")})
 
@@ -30,7 +38,7 @@ def admin_login():
 
 @auth_bp.route("/auth/admin/logout")
 def admin_logout():
-    session.pop("adminonline", None)
+    session.clear()
     return redirect(url_for("auth.admin_login"))
 
 
@@ -51,7 +59,14 @@ def teacher_login():
     password = payload.get("password") or ""
 
     teacher = Teacher.query.filter_by(email=email, is_active=True).first()
-    if teacher and teacher.check_password(password):
+    if teacher:
+        password_ok = teacher.check_password(password)
+    else:
+        dummy_password_check()
+        password_ok = False
+
+    if teacher and password_ok:
+        session.clear()
         session["teacheronline"] = teacher.id
         return jsonify({"success": True, "redirect_url": url_for("teacher.dashboard")})
 
@@ -60,7 +75,7 @@ def teacher_login():
 
 @auth_bp.route("/auth/teacher/logout")
 def teacher_logout():
-    session.pop("teacheronline", None)
+    session.clear()
     return redirect(url_for("auth.teacher_login"))
 
 
@@ -81,7 +96,14 @@ def portal_login():
     password = payload.get("password") or ""
 
     student = Student.query.filter_by(admission_number=admission_number, is_active=True).first()
-    if student and student.check_password(password):
+    if student:
+        password_ok = student.check_password(password)
+    else:
+        dummy_password_check()
+        password_ok = False
+
+    if student and password_ok:
+        session.clear()
         session["studentonline"] = student.id
         return jsonify({"success": True, "redirect_url": url_for("portal.dashboard")})
 
@@ -90,5 +112,5 @@ def portal_login():
 
 @auth_bp.route("/auth/portal/logout")
 def portal_logout():
-    session.pop("studentonline", None)
+    session.clear()
     return redirect(url_for("auth.portal_login"))

@@ -34,7 +34,7 @@ from app.services.results import (
     finalize_class_arm,
 )
 
-ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg", "svg"}
+ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg"}  # no SVG — can carry embedded <script>, stored-XSS risk if the file URL is opened directly
 MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024  # 2MB — generous for a logo, keeps page load fast
 
 
@@ -54,6 +54,7 @@ def serialize_term(term):
         "id": term.id,
         "sessionId": term.session_id,
         "name": term.name,
+        "order": term.order,
         "active": is_active,
         "locked": term.is_locked,
     }
@@ -64,7 +65,7 @@ def serialize_session(session_obj):
         "id": session_obj.id,
         "name": session_obj.name,
         "active": session_obj.is_active,
-        "terms": [serialize_term(t) for t in session_obj.terms],
+        "terms": [serialize_term(t) for t in sorted(session_obj.terms, key=lambda t: t.order)],
     }
 
 
@@ -176,9 +177,17 @@ def create_term():
     payload = request.get_json(silent=True) or {}
     session_id = payload.get("sessionId")
     name = (payload.get("name") or "").strip()
+    order = payload.get("order")
 
     if not session_id or not name:
         return jsonify({"success": False, "message": "Session and term name are required."}), 400
+
+    try:
+        order = int(order)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Term order (1st/2nd/3rd) is required."}), 400
+    if order not in (1, 2, 3):
+        return jsonify({"success": False, "message": "Term order must be 1, 2, or 3."}), 400
 
     session_obj = Session.query.get(session_id)
     if not session_obj:
@@ -186,8 +195,10 @@ def create_term():
 
     if Term.query.filter_by(session_id=session_id, name=name).first():
         return jsonify({"success": False, "message": "That term already exists for this session."}), 409
+    if Term.query.filter_by(session_id=session_id, order=order).first():
+        return jsonify({"success": False, "message": "This session already has a term with that order (1st/2nd/3rd)."}), 409
 
-    term = Term(name=name, session_id=session_id, is_locked=True)
+    term = Term(name=name, session_id=session_id, is_locked=True, order=order)
     db.session.add(term)
     db.session.commit()
     return jsonify({"success": True, "term": serialize_term(term)}), 201
@@ -536,7 +547,7 @@ def save_settings():
         if not _allowed_logo_file(logo_file.filename):
             return jsonify({
                 "success": False,
-                "message": "Logo must be a PNG, JPG, or SVG file.",
+                "message": "Logo must be a PNG or JPG file.",
             }), 400
 
         logo_file.seek(0, os.SEEK_END)

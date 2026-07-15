@@ -139,21 +139,21 @@ def student_result_print(result_id):
 @admin_bp.route("/results/<int:result_id>/pdf")
 @admin_required
 def student_result_pdf(result_id):
-    from app.services.pdf import build_single_result_pdf
+    from app.services.pdf import build_single_result_pdf, safe_filename
 
     result = StudentTermResult.query.get_or_404(result_id)
     if result.status != "finalized":
         abort(404)
 
     pdf_buffer = build_single_result_pdf(result)
-    filename = f"{result.student.admission_number}_{result.term.name}_{result.session.name}.pdf".replace(" ", "_")
+    filename = safe_filename(f"{result.student.admission_number}_{result.term.name}_{result.session.name}.pdf")
     return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
 @admin_bp.route("/results/<int:arm_id>/batch-pdf")
 @admin_required
 def class_result_batch_pdf(arm_id):
-    from app.services.pdf import build_batch_result_pdf
+    from app.services.pdf import build_batch_result_pdf, safe_filename
 
     arm = ClassArm.query.get_or_404(arm_id)
     results = (
@@ -168,5 +168,5 @@ def class_result_batch_pdf(arm_id):
         abort(404)
 
     pdf_buffer = build_batch_result_pdf(results)
-    filename = f"{arm.display_name}_batch_results.pdf".replace(" ", "_")
+    filename = safe_filename(f"{arm.display_name}_batch_results.pdf")
     return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)

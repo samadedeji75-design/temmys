@@ -208,6 +208,16 @@ def _build_result_flowables(result, school_config, ca_max, exam_max):
     return flow
 
 
+def safe_filename(name):
+    """Strip characters that break Content-Disposition download names or
+    get misread as path separators by the browser — spaces, slashes, and
+    backslashes. Session names in particular are stored like "2025/2026",
+    which would otherwise land a literal "/" in the filename."""
+    for ch in (" ", "/", "\\"):
+        name = name.replace(ch, "_")
+    return name
+
+
 def build_single_result_pdf(result):
     """One StudentTermResult -> one PDF, single student, one or more pages
     if the subject table is long. `result` must already be the finalized
