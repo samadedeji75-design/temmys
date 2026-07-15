@@ -1,4 +1,4 @@
-from flask import render_template, abort
+from flask import render_template, abort, send_file
 
 from app.models import SchoolConfig, Student, Teacher, ClassArm, StudentTermResult
 from app.admin import admin_bp
@@ -134,3 +134,39 @@ def student_result_print(result_id):
         abort(404)
     context = build_result_context(result)
     return render_template("portal/result_print.html", **context)
+
+
+@admin_bp.route("/results/<int:result_id>/pdf")
+@admin_required
+def student_result_pdf(result_id):
+    from app.services.pdf import build_single_result_pdf
+
+    result = StudentTermResult.query.get_or_404(result_id)
+    if result.status != "finalized":
+        abort(404)
+
+    pdf_buffer = build_single_result_pdf(result)
+    filename = f"{result.student.admission_number}_{result.term.name}_{result.session.name}.pdf".replace(" ", "_")
+    return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
+@admin_bp.route("/results/<int:arm_id>/batch-pdf")
+@admin_required
+def class_result_batch_pdf(arm_id):
+    from app.services.pdf import build_batch_result_pdf
+
+    arm = ClassArm.query.get_or_404(arm_id)
+    results = (
+        StudentTermResult.query.filter_by(status="finalized")
+        .join(Student, StudentTermResult.student_id == Student.id)
+        .filter(Student.class_arm_id == arm.id, Student.is_active.is_(True))
+        .all()
+    )
+    results.sort(key=lambda r: (r.class_position if r.class_position is not None else 10 ** 9))
+
+    if not results:
+        abort(404)
+
+    pdf_buffer = build_batch_result_pdf(results)
+    filename = f"{arm.display_name}_batch_results.pdf".replace(" ", "_")
+    return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)

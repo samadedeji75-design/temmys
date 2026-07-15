@@ -1,6 +1,6 @@
 /* grading-scale.js — wired to the real API (GET/POST /api/grading-scale). */
 
-(function () {
+$(function () {
   "use strict";
 
   const tableBody = document.getElementById("gradingTableBody");
@@ -168,4 +168,4 @@
   });
 
   loadGradingScale();
-})();
+});

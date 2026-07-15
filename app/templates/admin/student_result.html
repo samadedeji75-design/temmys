@@ -16,9 +16,29 @@
 
 <div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
   <h1 class="page-title mb-0">{{ term.name }} Result — {{ student.full_name }}</h1>
-  <button type="button" class="btn btn-primary" id="downloadPdfBtn">
+  <button type="button" class="btn btn-primary" id="downloadPdfBtn" data-result-id="{{ result.id }}">
     <span class="btn-label"><i class="bi bi-file-earmark-pdf"></i> Download PDF</span>
   </button>
+</div>
+
+<!-- Editable remarks — the read-only document below is shared verbatim with
+     the portal/print views, so remark entry lives here instead, outside the
+     shared include. -->
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 style="font-size: var(--font-size-md); margin-bottom: var(--space-3);">Remarks</h2>
+    <div class="form-group">
+      <label class="form-label" for="classTeacherRemarkInput">Class Teacher's Remark</label>
+      <textarea class="form-control" id="classTeacherRemarkInput" rows="2" maxlength="1000">{{ result.class_teacher_remark or "" }}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="principalRemarkInput">Principal's Remark</label>
+      <textarea class="form-control" id="principalRemarkInput" rows="2" maxlength="1000">{{ result.principal_remark or "" }}</textarea>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" id="saveRemarksBtn" data-result-id="{{ result.id }}">
+      <span class="btn-label">Save Remarks</span>
+    </button>
+  </div>
 </div>
 
 <!-- The white "document" card — content is the exact same include used by result_print.html,

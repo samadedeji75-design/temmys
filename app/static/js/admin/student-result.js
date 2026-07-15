@@ -1,14 +1,43 @@
-/* admin/student-result.js — student_result.html
-   PDF generation is Phase 7 (ReportLab). The button stays visible but must
-   not pretend to work — disable it with an explanatory title rather than
-   faking success. */
+/* admin/student-result.js — student_result.html */
 
-(function () {
+$(function () {
   "use strict";
 
-  const btn = document.getElementById("downloadPdfBtn");
-  if (btn) {
-    btn.disabled = true;
-    btn.setAttribute("title", "PDF export arrives in Phase 7.");
+  const downloadBtn = document.getElementById("downloadPdfBtn");
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", function () {
+      window.location.href = `/admin/results/${downloadBtn.dataset.resultId}/pdf`;
+    });
   }
-})();
+
+  const saveRemarksBtn = document.getElementById("saveRemarksBtn");
+  if (saveRemarksBtn) {
+    const classTeacherInput = document.getElementById("classTeacherRemarkInput");
+    const principalInput = document.getElementById("principalRemarkInput");
+    const classTeacherText = document.getElementById("resultClassTeacherRemarkText");
+    const principalText = document.getElementById("resultPrincipalRemarkText");
+
+    saveRemarksBtn.addEventListener("click", function () {
+      const resultId = saveRemarksBtn.dataset.resultId;
+      const originalLabel = saveRemarksBtn.querySelector(".btn-label").textContent;
+
+      saveRemarksBtn.disabled = true;
+      saveRemarksBtn.innerHTML = '<span class="btn-spinner"></span> Saving…';
+
+      window.apiRequest("POST", `/api/admin/results/${resultId}/remarks`, {
+        classTeacherRemark: classTeacherInput.value,
+        principalRemark: principalInput.value,
+      })
+        .done(function (response) {
+          if (!response || !response.success) return;
+          if (classTeacherText) classTeacherText.textContent = response.classTeacherRemark || "";
+          if (principalText) principalText.textContent = response.principalRemark || "";
+          window.showToast("Remarks saved.", "success");
+        })
+        .always(function () {
+          saveRemarksBtn.disabled = false;
+          saveRemarksBtn.innerHTML = `<span class="btn-label">${originalLabel}</span>`;
+        });
+    });
+  }
+});

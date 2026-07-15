@@ -1,7 +1,7 @@
 /* portal.js — real backend-driven logic for portal/dashboard.html and
    portal/result_view.html. */
 
-(function () {
+$(function () {
   "use strict";
 
   /* -----------------------------------------------------------------------
@@ -56,7 +56,8 @@
   const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 
   if (downloadPdfBtn) {
-    downloadPdfBtn.disabled = true;
-    downloadPdfBtn.setAttribute("title", "PDF download arrives in Phase 7.");
+    downloadPdfBtn.addEventListener("click", function () {
+      window.location.href = `/portal/results/${downloadPdfBtn.dataset.resultId}/pdf`;
+    });
   }
-})();
+});

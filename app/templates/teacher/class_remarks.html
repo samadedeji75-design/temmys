@@ -1,0 +1,59 @@
+{% extends "shared/base.html" %}
+{% set role = 'teacher' %}
+{% set active_page = 'score_entry' %}
+{% set page_title = 'Class Remarks' %}
+{% block title %}Remarks — {{ class_name }} — Teacher Portal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/base.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-center gap-2 mb-4">
+  <a href="{{ url_for('teacher.dashboard') }}" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
+  <div>
+    <h1 class="page-title mb-0">{{ class_name }} — Class Teacher's Remarks</h1>
+    <p class="text-muted mb-0">
+      {% if school_config.active_term and school_config.active_session %}
+        {{ school_config.active_term.name }}, {{ school_config.active_session.name }}
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-wrapper">
+      <table class="data-table" id="remarksTable">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Admission No.</th>
+            <th>Class Teacher's Remark</th>
+            <th style="width: 100px;"></th>
+          </tr>
+        </thead>
+        <tbody id="remarksTableBody">
+          <!-- Rows rendered by class-remarks.js from /api/teacher/classes/<id>/remarks -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" id="remarksEmptyState" hidden>
+      <div class="empty-state-icon"><i class="bi bi-journal-x"></i></div>
+      <h3>No finalized results yet</h3>
+      <p class="text-muted mb-0">Remarks can be entered once this class's term has been finalized by an admin.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.CLASS_REMARKS_ARM_ID = {{ class_arm_id }};
+</script>
+<script src="/static/js/teacher/class-remarks.js"></script>
+{% endblock %}

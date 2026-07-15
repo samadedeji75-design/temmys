@@ -1265,6 +1265,76 @@ def save_teacher_scores():
         "students": result,
     })
 
+
+@api_bp.route("/teacher/classes/<int:class_arm_id>/remarks", methods=["GET"])
+@api_teacher_required
+def teacher_get_class_remarks(class_arm_id):
+    """Finalized results for this class arm, for the class-teacher-remark
+    entry screen. Scoped the same way as score entry: a teacher must hold
+    at least one TeacherSubjectAssignment for this class arm (any subject —
+    this system has no separate "form teacher" concept, so any subject
+    teacher assigned to the class may enter the class remark)."""
+    teacher_id = session["teacheronline"]
+    assignment = TeacherSubjectAssignment.query.filter_by(
+        teacher_id=teacher_id, class_arm_id=class_arm_id
+    ).first()
+    if not assignment:
+        return jsonify({"success": False, "message": "You are not assigned to this class."}), 403
+
+    active_session, active_term = _get_active_term()
+    if not active_session or not active_term:
+        return jsonify({"success": True, "results": []})
+
+    results = (
+        StudentTermResult.query.filter_by(
+            term_id=active_term.id, session_id=active_session.id, status="finalized"
+        )
+        .join(Student, StudentTermResult.student_id == Student.id)
+        .filter(Student.class_arm_id == class_arm_id, Student.is_active.is_(True))
+        .order_by(Student.full_name)
+        .all()
+    )
+
+    payload = [
+        {
+            "resultId": r.id,
+            "fullName": r.student.full_name,
+            "admissionNumber": r.student.admission_number,
+            "classTeacherRemark": r.class_teacher_remark or "",
+        }
+        for r in results
+    ]
+
+    return jsonify({"success": True, "classArmLabel": assignment.class_arm.display_name, "results": payload})
+
+
+@api_bp.route("/teacher/results/<int:result_id>/remarks", methods=["POST"])
+@api_teacher_required
+def teacher_update_remark(result_id):
+    """A teacher may only set the class-teacher remark, and only for a
+    finalized result belonging to a class they're assigned to — the same
+    ownership check as everywhere else a result_id comes in from the client."""
+    teacher_id = session["teacheronline"]
+    result = StudentTermResult.query.get_or_404(result_id)
+
+    assignment = TeacherSubjectAssignment.query.filter_by(
+        teacher_id=teacher_id, class_arm_id=result.student.class_arm_id
+    ).first()
+    if not assignment:
+        return jsonify({"success": False, "message": "You are not assigned to this class."}), 403
+    if result.status != "finalized":
+        return jsonify({"success": False, "message": "This result has not been finalized yet."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    remark = (payload.get("classTeacherRemark") or "").strip()
+    if len(remark) > 1000:
+        return jsonify({"success": False, "message": "Remark is too long (max 1000 characters)."}), 400
+
+    result.class_teacher_remark = remark
+    db.session.commit()
+
+    return jsonify({"success": True, "classTeacherRemark": result.class_teacher_remark})
+
 # ---------------------------------------------------------------------------
 # FINALIZATION / RESULTS
 # ---------------------------------------------------------------------------
@@ -1412,6 +1482,40 @@ def results_overview(class_arm_id):
         "activeSession": active_session.name,
         "isFinalized": is_finalized,
         "results": payload,
+    })
+
+
+@api_bp.route("/admin/results/<int:result_id>/remarks", methods=["POST"])
+@api_admin_required
+def admin_update_remarks(result_id):
+    """Admin stands in for both the class-teacher and principal role here —
+    can set either or both remarks in one call. Only fields present in the
+    payload are touched, so this also works for saving just one field at a
+    time from the UI."""
+    result = StudentTermResult.query.get_or_404(result_id)
+    if result.status != "finalized":
+        return jsonify({"success": False, "message": "This result has not been finalized yet."}), 404
+
+    payload = request.get_json(silent=True) or {}
+
+    if "classTeacherRemark" in payload:
+        remark = (payload.get("classTeacherRemark") or "").strip()
+        if len(remark) > 1000:
+            return jsonify({"success": False, "message": "Class teacher remark is too long (max 1000 characters)."}), 400
+        result.class_teacher_remark = remark
+
+    if "principalRemark" in payload:
+        remark = (payload.get("principalRemark") or "").strip()
+        if len(remark) > 1000:
+            return jsonify({"success": False, "message": "Principal remark is too long (max 1000 characters)."}), 400
+        result.principal_remark = remark
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "classTeacherRemark": result.class_teacher_remark,
+        "principalRemark": result.principal_remark,
     })
 
 

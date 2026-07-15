@@ -1,7 +1,7 @@
 /* finalize-term.js — real backend-driven logic for finalize_term.html and
    class_result_overview.html. */
 
-(function () {
+$(function () {
   "use strict";
 
   /* -----------------------------------------------------------------------
@@ -175,14 +175,10 @@
       });
     }
 
-    document.getElementById("downloadBatchBtn").addEventListener("click", (e) => {
-      const btn = e.currentTarget;
-      btn.disabled = true;
-      btn.setAttribute("title", "PDF export arrives in Phase 7.");
+    document.getElementById("downloadBatchBtn").addEventListener("click", () => {
+      window.location.href = `/admin/results/${armId}/batch-pdf`;
     });
-    document.getElementById("downloadBatchBtn").disabled = true;
-    document.getElementById("downloadBatchBtn").setAttribute("title", "PDF export arrives in Phase 7.");
 
     loadOverview();
   }
-})();
+});

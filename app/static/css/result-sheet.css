@@ -158,14 +158,6 @@
   min-height: 2.4rem;
   line-height: 1.4;
 }
-.remark-block .signature-line {
-  margin-top: 1.75rem;
-  border-top: 1px solid #111111;
-  padding-top: 0.25rem;
-  font-size: 0.68rem;
-  color: #666666;
-  text-align: center;
-}
 
 /* -- Footer --------------------------------------------------------------*/
 .result-sheet-footer {
