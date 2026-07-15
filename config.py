@@ -40,6 +40,16 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True  # requires the app actually served over HTTPS
+    ADMIN_EMAIL="admin@temmys.com"
+    ADMIN_PASSWORD="admin123"
+    SQLALCHEMY_DATABASE_URI = (
+        f"mysql+pymysql://"
+        f"{os.getenv('MYSQLUSER')}:"
+        f"{os.getenv('MYSQLPASSWORD')}@"
+        f"{os.getenv('MYSQLHOST')}:"
+        f"{os.getenv('MYSQLPORT')}/"
+        f"{os.getenv('MYSQL_DATABASE')}"
+)
 
 
 config = {

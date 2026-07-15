@@ -3,6 +3,7 @@ from flask import Flask, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import config
 
@@ -18,6 +19,15 @@ def create_app(config_name=None):
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    # Railway (and most PaaS platforms) terminate TLS at an edge proxy and
+    # forward to this app over plain HTTP, setting X-Forwarded-* headers.
+    # Without this, Flask/Werkzeug sees every request as http://, which
+    # breaks SESSION_COOKIE_SECURE (the cookie never gets sent back) and
+    # can make url_for(..., _external=True) generate http:// links.
+    # x_for/x_proto=1 trusts exactly one proxy hop — matches a single edge
+    # proxy in front of the app; raise these if you add another hop later.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # Phase 8 hardening: cap request body size globally so no upload
     # endpoint (CSV import, logo upload, or any future one) can be used
