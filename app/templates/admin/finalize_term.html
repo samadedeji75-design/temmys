@@ -12,9 +12,9 @@
 <div class="d-flex justify-between align-center mb-4">
   <div>
     <h1 class="page-title mb-0">Finalize Term</h1>
-    <p class="text-muted mb-0">First Term — 2025/2026 Session</p>
+    <p class="text-muted mb-0">{{ school_config.active_term.name if school_config.active_term else "No term" }} — {{ school_config.active_session.name if school_config.active_session else "No session" }} Session</p>
   </div>
-  <span class="badge badge-info" id="pollingIndicator"><i class="bi bi-arrow-repeat"></i> Live status</span>
+  <button type="button" class="btn btn-secondary btn-sm" id="refreshFinalizeBtn"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
 </div>
 
 <div class="card">

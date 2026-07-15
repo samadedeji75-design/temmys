@@ -131,6 +131,7 @@ class Teacher(db.Model):
     full_name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    password_encrypted = db.Column(db.Text)  # reversible copy for admin view — see app/services/security.py
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -180,6 +181,7 @@ class Student(db.Model):
     class_arm_id = db.Column(db.Integer, db.ForeignKey("class_arm.id"), nullable=False)
 
     password_hash = db.Column(db.String(255), nullable=False)  # parent/student portal login
+    password_encrypted = db.Column(db.Text)  # reversible copy for admin view — see app/services/security.py
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

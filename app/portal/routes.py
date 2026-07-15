@@ -1,8 +1,37 @@
-from flask import render_template
+from flask import render_template, session, abort
 
+from app.models import StudentTermResult
 from app.portal import portal_bp
+from app.portal.decorators import portal_required
 
 
 @portal_bp.route("/dashboard")
+@portal_required
 def dashboard():
-    return render_template("portal/dashboard.html")
+    return render_template("portal/dashboard.html", role="student", active_page="dashboard")
+
+
+@portal_bp.route("/results/<int:result_id>")
+@portal_required
+def result_view(result_id):
+    from app.services.results import build_result_context
+    result = StudentTermResult.query.get_or_404(result_id)
+    if result.student_id != session["studentonline"]:
+        abort(403)
+    if result.status != "finalized":
+        abort(404)
+    context = build_result_context(result)
+    return render_template("portal/result_view.html", role="student", active_page="results", **context)
+
+
+@portal_bp.route("/results/<int:result_id>/print")
+@portal_required
+def result_print(result_id):
+    from app.services.results import build_result_context
+    result = StudentTermResult.query.get_or_404(result_id)
+    if result.student_id != session["studentonline"]:
+        abort(403)
+    if result.status != "finalized":
+        abort(404)
+    context = build_result_context(result)
+    return render_template("portal/result_print.html", **context)

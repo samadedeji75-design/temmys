@@ -20,6 +20,9 @@ $(function () {
   const $filterStatus = $("#filterStatus");
   const $clearFiltersBtn = $("#clearFiltersBtn");
   const $genPasswordModal = $("#generatedPasswordModal");
+  const $moreDetailsSection = $("#moreDetailsSection");
+  const $passwordManageModal = $("#passwordManageModal");
+  let currentPasswordManageStudent = null;
 
   function initials(name) {
     const parts = name.trim().split(/\s+/);
@@ -93,6 +96,11 @@ $(function () {
             });
           }
         });
+      });
+
+      row.querySelector(".js-manage-password").addEventListener("click", function () {
+        closeAllDropdowns();
+        openPasswordManager(s);
       });
 
       row.querySelector(".js-deactivate-student").addEventListener("click", function () {
@@ -172,6 +180,7 @@ $(function () {
     $("#studentModalTitle").text("Add Student");
     $form[0].reset();
     $("#studentId").val("");
+    $moreDetailsSection.prop("hidden", true);
     window.openModal($modal);
   }
 
@@ -186,13 +195,70 @@ $(function () {
     $("#guardianName").val(student.guardianName || "");
     $("#guardianPhone").val(student.guardianPhone || "");
     $("#guardianEmail").val(student.guardianEmail || "");
+    $moreDetailsSection.prop("hidden", true);
     window.openModal($modal);
   }
+
+  $("#toggleMoreDetails").on("click", function () {
+    $moreDetailsSection.prop("hidden", !$moreDetailsSection.prop("hidden"));
+  });
 
   function showGeneratedPassword(password) {
     $("#generatedPasswordDisplay").val(password);
     window.openModal($genPasswordModal);
   }
+
+  function openPasswordManager(student) {
+    currentPasswordManageStudent = student;
+    $("#passwordManageTitle").text("Manage Password — " + student.fullName);
+    $("#newPasswordInput").val("");
+    $("#currentPasswordDisplay").val("").data("plain", "").data("masked", false);
+    $("#togglePasswordVisibility").prop("disabled", false);
+    $("#passwordUnavailableHint").prop("hidden", true);
+
+    window.apiRequest("GET", "/api/students/" + student.id + "/password").done(function (response) {
+      if (!response || !response.success) return;
+      if (response.password === null || response.password === undefined) {
+        $("#passwordUnavailableHint").prop("hidden", false);
+        $("#togglePasswordVisibility").prop("disabled", true);
+        $("#currentPasswordDisplay").val("");
+        return;
+      }
+      $("#currentPasswordDisplay").data("plain", response.password).val("••••••••").data("masked", true);
+    });
+
+    window.openModal($passwordManageModal);
+  }
+
+  $("#togglePasswordVisibility").on("click", function () {
+    const $display = $("#currentPasswordDisplay");
+    const masked = $display.data("masked");
+    const plain = $display.data("plain") || "";
+    if (!plain) return;
+    if (masked) {
+      $display.val(plain).data("masked", false);
+      $(this).find("i").removeClass("bi-eye").addClass("bi-eye-slash");
+    } else {
+      $display.val("••••••••").data("masked", true);
+      $(this).find("i").removeClass("bi-eye-slash").addClass("bi-eye");
+    }
+  });
+
+  $("#generateNewPasswordBtn").on("click", function () {
+    $("#newPasswordInput").val(crypto.randomUUID().slice(0, 10));
+  });
+
+  $("#savePasswordBtn").on("click", function () {
+    if (!currentPasswordManageStudent) return;
+    const newPassword = $("#newPasswordInput").val();
+    window.apiRequest("PUT", "/api/students/" + currentPasswordManageStudent.id + "/password", { password: newPassword })
+      .done(function (response) {
+        if (response && response.success) {
+          window.showToast("Password updated.", "success");
+          window.closeModal($passwordManageModal);
+        }
+      });
+  });
 
   $("#addStudentBtn").on("click", function () {
     $("#admissionNumber").prop("disabled", false);
@@ -214,7 +280,7 @@ $(function () {
       guardianEmail: $("#guardianEmail").val().trim(),
     };
 
-    if (!payload.fullName || !payload.classArmId || (!id && !payload.admissionNumber)) return;
+    if (!payload.fullName || !payload.classArmId) return;
 
     $saveBtn.prop("disabled", true).find(".btn-spinner").show();
 

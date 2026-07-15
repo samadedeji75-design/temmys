@@ -16,7 +16,7 @@
 <div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
   <div>
     <h1 class="page-title mb-0">Class Result Overview</h1>
-    <p class="text-muted mb-0">JSS3 A — First Term, 2025/2026 Session</p>
+    <p class="text-muted mb-0">{{ class_arm_name }} — {{ school_config.active_term.name if school_config.active_term else "No term" }}, {{ school_config.active_session.name if school_config.active_session else "No session" }} Session</p>
   </div>
   <button type="button" class="btn btn-primary" id="downloadBatchBtn">
     <span class="btn-label"><i class="bi bi-file-earmark-pdf"></i> Download Class Result (Batch PDF)</span>
@@ -39,14 +39,23 @@
           </tr>
         </thead>
         <tbody id="overviewTableBody">
-          <!-- Rows rendered by finalize-term.js from mock computed results -->
+          <!-- Rows rendered by finalize-term.js from /api/results/<arm_id>/overview -->
         </tbody>
       </table>
+    </div>
+
+    <div class="empty-state" id="overviewEmptyState" hidden>
+      <div class="empty-state-icon"><i class="bi bi-bar-chart"></i></div>
+      <h3>This class hasn't been finalized yet</h3>
+      <p class="text-muted mb-0">Finalize the term for this class to see ranked results here.</p>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+  window.CLASS_RESULT_OVERVIEW_ARM_ID = {{ class_arm_id }};
+</script>
 <script src="/static/js/admin/finalize-term.js"></script>
 {% endblock %}

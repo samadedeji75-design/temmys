@@ -49,9 +49,9 @@
       <li class="sidebar-nav-section">Results</li>
       <li><a class="sidebar-nav-link {% if active_page == 'grading_scale' %}active{% endif %}" href="{{ url_for('admin.grading_scale') }}">
         <i class="bi bi-sliders"></i> Grading Scale</a></li>
-      <li><a class="sidebar-nav-link {% if active_page == 'finalize_term' %}active{% endif %}" href="#">
+      <li><a class="sidebar-nav-link {% if active_page == 'finalize_term' %}active{% endif %}" href="{{ url_for('admin.finalize_term') }}">
         <i class="bi bi-check2-circle"></i> Finalize Term</a></li>
-      <li><a class="sidebar-nav-link {% if active_page == 'class_results' %}active{% endif %}" href="#">
+      <li><a class="sidebar-nav-link {% if active_page == 'class_results' %}active{% endif %}" href="{{ url_for('admin.finalize_term') }}">
         <i class="bi bi-bar-chart"></i> Class Results</a></li>
 
     {% elif role == 'teacher' %}
@@ -65,9 +65,9 @@
 
     {% else %}
       <li class="sidebar-nav-section">Overview</li>
-      <li><a class="sidebar-nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="#">
+      <li><a class="sidebar-nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('portal.dashboard') }}">
         <i class="bi bi-speedometer2"></i> Dashboard</a></li>
-      <li><a class="sidebar-nav-link {% if active_page == 'results' %}active{% endif %}" href="#">
+      <li><a class="sidebar-nav-link {% if active_page == 'results' %}active{% endif %}" href="{{ url_for('portal.dashboard') }}">
         <i class="bi bi-file-earmark-text"></i> Results</a></li>
     {% endif %}
   </ul>

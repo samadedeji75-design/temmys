@@ -1,135 +1,120 @@
-﻿{% extends "shared/base.html" %}
-{% set role = 'admin' %}
-{% set active_page = 'students' %}
-{% set page_title = 'Edit Student' if student else 'Add Student' %}
-{% block title %}{{ page_title }} — School Result Management System{% endblock %}
+<!-- Add/Edit Student modal — included by students_list.html -->
+<div class="modal-backdrop-custom" id="studentModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 id="studentModalTitle">Add Student</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <form id="studentForm">
+      <div class="modal-box-body">
+        <input type="hidden" id="studentId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="admissionNumber">Admission Number</label>
+            <input type="text" class="form-control" id="admissionNumber" placeholder="Leave blank to auto-generate">
+            <div class="form-hint">Auto-generated if left blank — you can fill it in or change it later from the student's Edit screen.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="studentFullName">Full Name <span class="required">*</span></label>
+            <input type="text" class="form-control" id="studentFullName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="studentClassArm">Class <span class="required">*</span></label>
+            <select class="form-select" id="studentClassArm" required></select>
+          </div>
+        </div>
 
-{% block extra_css %}
-<link rel="stylesheet" href="/static/css/base.css">
-{% endblock %}
-
-{% block content %}
-<div class="d-flex align-center gap-2 mb-4">
-  <a href="/admin/students" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Students</a>
+        <div class="form-section-collapsible">
+          <button type="button" class="btn-link" id="toggleMoreDetails">
+            <i class="bi bi-chevron-down"></i> Add more details (optional)
+          </button>
+          <div id="moreDetailsSection" hidden>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="studentGender">Gender</label>
+                <select class="form-select" id="studentGender">
+                  <option value="">—</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="studentDob">Date of Birth</label>
+                <input type="date" class="form-control" id="studentDob">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="guardianName">Guardian Name</label>
+                <input type="text" class="form-control" id="guardianName">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="guardianPhone">Guardian Phone</label>
+                <input type="text" class="form-control" id="guardianPhone">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="guardianEmail">Guardian Email</label>
+                <input type="email" class="form-control" id="guardianEmail">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-box-footer">
+        <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="studentSaveBtn">
+          <span class="btn-spinner" style="display:none;"></span>
+          <span class="btn-label">Save Student</span>
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<h1 class="page-title mb-4" id="formHeading">Add Student</h1>
-
-<form id="studentForm" novalidate>
-  <div class="card mb-4">
-    <div class="card-header"><h3>Personal Details</h3></div>
-    <div class="card-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="firstName">First Name <span class="required">*</span></label>
-          <input type="text" class="form-control" id="firstName" name="firstName" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="lastName">Last Name <span class="required">*</span></label>
-          <input type="text" class="form-control" id="lastName" name="lastName" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="otherNames">Other Names</label>
-          <input type="text" class="form-control" id="otherNames" name="otherNames">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="gender">Gender <span class="required">*</span></label>
-          <select class="form-select" id="gender" name="gender" required>
-            <option value="" disabled selected>Select gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="dob">Date of Birth</label>
-          <input type="date" class="form-control" id="dob" name="dob">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="photo">Photo</label>
-          <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
-          <div class="form-hint">Optional — placeholder avatar is used until a photo is uploaded.</div>
-        </div>
+<!-- Generated-password modal — shown once after create/reset, never persisted client-side -->
+<div class="modal-backdrop-custom" id="generatedPasswordModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3>Login Credentials Generated</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-box-body">
+      <p class="text-muted">Share this password with the student/guardian now — it will not be shown again.</p>
+      <div class="input-with-button">
+        <input type="text" class="form-control" id="generatedPasswordDisplay" readonly>
       </div>
+    </div>
+    <div class="modal-box-footer">
+      <button type="button" class="btn btn-primary" data-modal-dismiss>Done</button>
+    </div>
+  </div>
+</div>
 
-      <div class="form-section-heading">Enrollment</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="admissionNumber">Admission Number <span class="required">*</span></label>
-          <div class="input-with-button">
-            <input type="text" class="form-control" id="admissionNumber" name="admissionNumber" required placeholder="e.g. STU/2025/0142">
-          </div>
-          <div class="form-feedback" id="admissionFeedback"></div>
+<!-- View/Edit Password modal — shared markup pattern reused for teachers -->
+<div class="modal-backdrop-custom" id="passwordManageModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 id="passwordManageTitle">Manage Password</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-box-body">
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <div class="input-with-button">
+          <input type="text" class="form-control" id="currentPasswordDisplay" readonly>
+          <button type="button" class="btn btn-secondary" id="togglePasswordVisibility"><i class="bi bi-eye"></i></button>
         </div>
-        <div class="form-group">
-          <label class="form-label" for="classArm">Class Arm <span class="required">*</span></label>
-          <select class="form-select" id="classArm" name="classArm" required>
-            <option value="" disabled selected>Select class arm</option>
-            <!-- TODO: wire to backend — populate from /api/classes -->
-            <option value="jss1a">JSS1 A</option>
-            <option value="jss1b">JSS1 B</option>
-            <option value="jss2a">JSS2 A</option>
-            <option value="jss3a">JSS3 A</option>
-            <option value="ss1a">SS1 A</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="admissionDate">Admission Date</label>
-          <input type="date" class="form-control" id="admissionDate" name="admissionDate">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="status">Status</label>
-          <select class="form-select" id="status" name="status">
-            <option value="active" selected>Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
+        <div class="form-hint" id="passwordUnavailableHint" hidden>Not available for this account — use Reset Password instead, or set a new one below.</div>
       </div>
-
-      <div class="form-section-heading">Guardian / Contact</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="guardianName">Guardian Name</label>
-          <input type="text" class="form-control" id="guardianName" name="guardianName">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="guardianPhone">Guardian Phone</label>
-          <input type="tel" class="form-control" id="guardianPhone" name="guardianPhone">
-        </div>
-        <div class="form-group full-width">
-          <label class="form-label" for="guardianEmail">Guardian Email</label>
-          <input type="email" class="form-control" id="guardianEmail" name="guardianEmail">
-        </div>
-        <div class="form-group full-width">
-          <label class="form-label" for="address">Home Address</label>
-          <textarea class="form-control" id="address" name="address" rows="2"></textarea>
-        </div>
-      </div>
-
-      <div class="form-section-heading">Portal Access</div>
-      <div class="form-grid">
-        <div class="form-group full-width">
-          <label class="form-label" for="password">Login Password <span class="required">*</span></label>
-          <div class="input-with-button">
-            <input type="text" class="form-control" id="password" name="password" required readonly placeholder="Click generate…">
-            <button type="button" class="btn btn-secondary" id="generatePasswordBtn">
-              <i class="bi bi-arrow-repeat"></i> Auto-Generate
-            </button>
-          </div>
-          <div class="form-hint">The parent/student portal login uses admission number + this password. It can be reset later from the students list.</div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="newPasswordInput">Set New Password</label>
+        <div class="input-with-button">
+          <input type="text" class="form-control" id="newPasswordInput" placeholder="Type a new password…">
+          <button type="button" class="btn btn-secondary" id="generateNewPasswordBtn"><i class="bi bi-arrow-repeat"></i> Generate</button>
         </div>
       </div>
     </div>
+    <div class="modal-box-footer">
+      <button type="button" class="btn btn-secondary" data-modal-dismiss>Close</button>
+      <button type="button" class="btn btn-primary" id="savePasswordBtn">Save New Password</button>
+    </div>
   </div>
-
-  <div class="form-actions" style="border-top:none; margin-top:0;">
-    <button type="submit" class="btn btn-primary" id="saveStudentBtn">
-      <span class="btn-label">Save Student</span>
-    </button>
-    <a href="/admin/students" class="btn btn-secondary">Cancel</a>
-  </div>
-</form>
-{% endblock %}
-
-{% block extra_js %}
-<script src="/static/js/admin/students.js"></script>
-{% endblock %}
+</div>

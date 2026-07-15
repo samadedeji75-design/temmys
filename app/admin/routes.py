@@ -1,6 +1,6 @@
-from flask import render_template
+from flask import render_template, abort
 
-from app.models import SchoolConfig, Student, Teacher, ClassArm
+from app.models import SchoolConfig, Student, Teacher, ClassArm, StudentTermResult
 from app.admin import admin_bp
 from app.admin.decorators import admin_required
 
@@ -95,3 +95,42 @@ def class_roster(arm_id):
         class_arm_id=arm.id,
         class_arm_name=arm.display_name,
     )
+
+
+@admin_bp.route("/finalize-term")
+@admin_required
+def finalize_term():
+    return render_template("admin/finalize_term.html", role="admin", active_page="finalize_term")
+
+
+@admin_bp.route("/results/<int:arm_id>/overview")
+@admin_required
+def class_result_overview(arm_id):
+    arm = ClassArm.query.get_or_404(arm_id)
+    return render_template(
+        "admin/class_result_overview.html",
+        role="admin", active_page="class_results",
+        class_arm_id=arm.id, class_arm_name=arm.display_name,
+    )
+
+
+@admin_bp.route("/results/<int:result_id>")
+@admin_required
+def student_result(result_id):
+    from app.services.results import build_result_context
+    result = StudentTermResult.query.get_or_404(result_id)
+    if result.status != "finalized":
+        abort(404)
+    context = build_result_context(result)
+    return render_template("admin/student_result.html", role="admin", active_page="class_results", **context)
+
+
+@admin_bp.route("/results/<int:result_id>/print")
+@admin_required
+def student_result_print(result_id):
+    from app.services.results import build_result_context
+    result = StudentTermResult.query.get_or_404(result_id)
+    if result.status != "finalized":
+        abort(404)
+    context = build_result_context(result)
+    return render_template("portal/result_print.html", **context)

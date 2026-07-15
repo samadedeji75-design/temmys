@@ -23,3 +23,14 @@ def api_teacher_required(view_func):
             return jsonify({"success": False, "message": "Not authenticated."}), 401
         return view_func(*args, **kwargs)
     return wrapped
+
+
+def api_portal_required(view_func):
+    """Same pattern as api_teacher_required, scoped to the portal session.
+    Returns a JSON 401 instead of redirecting."""
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if session.get("studentonline") is None:
+            return jsonify({"success": False, "message": "Not authenticated."}), 401
+        return view_func(*args, **kwargs)
+    return wrapped

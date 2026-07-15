@@ -1,3 +1,5 @@
-first_name,last_name,admission_number,class_arm,gender,guardian_phone
-Adaeze,Okafor,STU/2026/0201,jss1a,Female,08031112222
-Tobi,Adewale,STU/2026/0202,jss1a,Male,08052223333
+full_name,class_arm,admission_number,gender,date_of_birth,guardian_name,guardian_phone,guardian_email
+Adaeze Okafor,JSS1 A,STU/2026/0201,Female,2013-04-12,Mrs. Okafor,08031112222,okafor@example.com
+Tobi Adewale,JSS1 A,,Male,,,,
+Chinedu Umeh,JSS2 A,STU/2026/0203,Male,2012-09-01,Mr. Umeh,08099998888,
+Bisi Lawal,SS1 A,,,,,,

@@ -18,6 +18,8 @@ $(function () {
   const $filterStatus = $("#filterStatus");
   const $clearFiltersBtn = $("#clearFiltersBtn");
   const $genPasswordModal = $("#generatedPasswordModal");
+  const $passwordManageModal = $("#passwordManageModal");
+  let currentPasswordManageTeacher = null;
 
   function initials(name) {
     const parts = name.trim().split(/\s+/);
@@ -57,6 +59,8 @@ $(function () {
       row.querySelector(".avatar-initial").textContent = initials(t.fullName);
       row.querySelector(".teacher-name-cell").textContent = t.fullName;
       row.querySelector(".teacher-email-cell").textContent = t.email;
+      const $placeholderBadge = $(row).find(".teacher-email-placeholder-badge");
+      $placeholderBadge.prop("hidden", !t.emailIsPlaceholder);
       row.querySelector(".teacher-assignment-count-cell").textContent = t.assignmentCount;
 
       const badge = row.querySelector(".teacher-status-badge");
@@ -89,6 +93,11 @@ $(function () {
             });
           }
         });
+      });
+
+      row.querySelector(".js-manage-password").addEventListener("click", function () {
+        closeAllDropdowns();
+        openPasswordManager(t);
       });
 
       row.querySelector(".js-deactivate-teacher").addEventListener("click", function () {
@@ -163,6 +172,58 @@ $(function () {
     window.openModal($genPasswordModal);
   }
 
+  function openPasswordManager(teacher) {
+    currentPasswordManageTeacher = teacher;
+    $("#passwordManageTitle").text("Manage Password — " + teacher.fullName);
+    $("#newPasswordInput").val("");
+    $("#currentPasswordDisplay").val("").data("plain", "").data("masked", false);
+    $("#togglePasswordVisibility").prop("disabled", false);
+    $("#passwordUnavailableHint").prop("hidden", true);
+
+    window.apiRequest("GET", "/api/teachers/" + teacher.id + "/password").done(function (response) {
+      if (!response || !response.success) return;
+      if (response.password === null || response.password === undefined) {
+        $("#passwordUnavailableHint").prop("hidden", false);
+        $("#togglePasswordVisibility").prop("disabled", true);
+        $("#currentPasswordDisplay").val("");
+        return;
+      }
+      $("#currentPasswordDisplay").data("plain", response.password).val("••••••••").data("masked", true);
+    });
+
+    window.openModal($passwordManageModal);
+  }
+
+  $("#togglePasswordVisibility").on("click", function () {
+    const $display = $("#currentPasswordDisplay");
+    const masked = $display.data("masked");
+    const plain = $display.data("plain") || "";
+    if (!plain) return;
+    if (masked) {
+      $display.val(plain).data("masked", false);
+      $(this).find("i").removeClass("bi-eye").addClass("bi-eye-slash");
+    } else {
+      $display.val("••••••••").data("masked", true);
+      $(this).find("i").removeClass("bi-eye-slash").addClass("bi-eye");
+    }
+  });
+
+  $("#generateNewPasswordBtn").on("click", function () {
+    $("#newPasswordInput").val(crypto.randomUUID().slice(0, 10));
+  });
+
+  $("#savePasswordBtn").on("click", function () {
+    if (!currentPasswordManageTeacher) return;
+    const newPassword = $("#newPasswordInput").val();
+    window.apiRequest("PUT", "/api/teachers/" + currentPasswordManageTeacher.id + "/password", { password: newPassword })
+      .done(function (response) {
+        if (response && response.success) {
+          window.showToast("Password updated.", "success");
+          window.closeModal($passwordManageModal);
+        }
+      });
+  });
+
   $("#addTeacherBtn").on("click", openForAdd);
 
   $form.on("submit", function (e) {
@@ -173,7 +234,7 @@ $(function () {
       fullName: $("#teacherFullName").val().trim(),
       email: $("#teacherEmail").val().trim(),
     };
-    if (!payload.fullName || !payload.email) return;
+    if (!payload.fullName) return;
 
     $saveBtn.prop("disabled", true).find(".btn-spinner").show();
 

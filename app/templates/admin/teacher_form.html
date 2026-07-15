@@ -13,8 +13,9 @@
           <input type="text" class="form-control" id="teacherFullName" required>
         </div>
         <div class="form-group mb-0">
-          <label class="form-label" for="teacherEmail">Email <span class="required">*</span></label>
-          <input type="email" class="form-control" id="teacherEmail" required>
+          <label class="form-label" for="teacherEmail">Email</label>
+          <input type="email" class="form-control" id="teacherEmail">
+          <div class="form-hint">Leave blank for now if you don't have it yet — the teacher won't be able to log in until a real email is added, but you can still assign them to classes and subjects in the meantime.</div>
         </div>
       </div>
       <div class="modal-box-footer">
@@ -43,6 +44,37 @@
     </div>
     <div class="modal-box-footer">
       <button type="button" class="btn btn-primary" data-modal-dismiss>Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- View/Edit Password modal — shared markup pattern reused for students -->
+<div class="modal-backdrop-custom" id="passwordManageModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 id="passwordManageTitle">Manage Password</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-box-body">
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <div class="input-with-button">
+          <input type="text" class="form-control" id="currentPasswordDisplay" readonly>
+          <button type="button" class="btn btn-secondary" id="togglePasswordVisibility"><i class="bi bi-eye"></i></button>
+        </div>
+        <div class="form-hint" id="passwordUnavailableHint" hidden>Not available for this account — use Reset Password instead, or set a new one below.</div>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label" for="newPasswordInput">Set New Password</label>
+        <div class="input-with-button">
+          <input type="text" class="form-control" id="newPasswordInput" placeholder="Type a new password…">
+          <button type="button" class="btn btn-secondary" id="generateNewPasswordBtn"><i class="bi bi-arrow-repeat"></i> Generate</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-box-footer">
+      <button type="button" class="btn btn-secondary" data-modal-dismiss>Close</button>
+      <button type="button" class="btn btn-primary" id="savePasswordBtn">Save New Password</button>
     </div>
   </div>
 </div>

@@ -23,6 +23,7 @@
       <div style="font-weight:600; color: var(--color-text);">Drag and drop a CSV file here, or click to browse</div>
       <div class="text-sm text-muted mt-2" style="margin-top: var(--space-2);">
         Expected columns: admission_number, full_name, class_arm, gender, date_of_birth, guardian_name, guardian_phone, guardian_email
+        <br>Only <strong>full_name</strong> and <strong>class_arm</strong> are required — leave the rest blank (including admission_number) and they'll be auto-generated or left empty.
       </div>
       <input type="file" id="csvFileInput" accept=".csv">
     </label>
@@ -75,5 +76,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/admin/students-import.js"></script>
+<script src="/static/js/admin/student-import.js"></script>
 {% endblock %}

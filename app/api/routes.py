@@ -22,9 +22,17 @@ from app.models import (
     Teacher,
     TeacherSubjectAssignment,
     Score,
+    StudentTermResult,
 )
 from app.api import api_bp
-from app.api.decorators import api_admin_required, api_teacher_required
+from app.api.decorators import api_admin_required, api_teacher_required, api_portal_required
+from app.services.security import encrypt_password, decrypt_password
+from app.services.results import (
+    get_required_subjects,
+    get_eligible_students,
+    is_student_complete,
+    finalize_class_arm,
+)
 
 ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg", "svg"}
 MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024  # 2MB — generous for a logo, keeps page load fast
@@ -98,6 +106,7 @@ def serialize_teacher(teacher):
         "id": teacher.id,
         "fullName": teacher.full_name,
         "email": teacher.email,
+        "emailIsPlaceholder": teacher.email.endswith("@placeholder.local"),
         "isActive": teacher.is_active,
         "assignmentCount": len(teacher.assignments),
     }
@@ -560,6 +569,28 @@ def save_settings():
 # STUDENTS
 # ---------------------------------------------------------------------------
 
+def _generate_admission_number(exclude=None):
+    """Unique admission number in STU/<year>/<seq> form, used whenever the
+    admin (or a CSV row) doesn't supply one. `exclude` lets a caller pass in
+    admission numbers already claimed earlier in the same request (e.g. an
+    in-progress CSV import batch) that aren't committed to the DB yet."""
+    exclude = {e.lower() for e in (exclude or set())}
+    year = datetime.utcnow().year
+    prefix = f"STU/{year}/"
+    existing = {
+        a.lower() for (a,) in db.session.query(Student.admission_number)
+        .filter(Student.admission_number.ilike(f"{prefix}%"))
+        .all()
+    }
+    existing |= exclude
+    seq = 1
+    while True:
+        candidate = f"{prefix}{seq:04d}"
+        if candidate.lower() not in existing:
+            return candidate
+        seq += 1
+
+
 @api_bp.route("/students", methods=["GET"])
 @api_admin_required
 def list_students():
@@ -579,14 +610,17 @@ def create_student():
     full_name = (payload.get("fullName") or "").strip()
     class_arm_id = payload.get("classArmId")
 
-    if not admission_number or not full_name or not class_arm_id:
+    if not full_name or not class_arm_id:
         return jsonify({
             "success": False,
-            "message": "Admission number, full name, and class are required.",
+            "message": "Full name and class are required.",
         }), 400
 
-    if Student.query.filter_by(admission_number=admission_number).first():
-        return jsonify({"success": False, "message": "That admission number is already in use."}), 409
+    if admission_number:
+        if Student.query.filter_by(admission_number=admission_number).first():
+            return jsonify({"success": False, "message": "That admission number is already in use."}), 409
+    else:
+        admission_number = _generate_admission_number()
 
     class_arm = ClassArm.query.get(class_arm_id)
     if not class_arm:
@@ -605,6 +639,7 @@ def create_student():
 
     raw_password = payload.get("password") or secrets.token_urlsafe(8)
     student.set_password(raw_password)
+    student.password_encrypted = encrypt_password(raw_password)
 
     db.session.add(student)
     db.session.commit()
@@ -664,14 +699,37 @@ def reset_student_password(student_id):
     student = Student.query.get_or_404(student_id)
     new_password = secrets.token_urlsafe(8)
     student.set_password(new_password)
+    student.password_encrypted = encrypt_password(new_password)
     db.session.commit()
     return jsonify({"success": True, "generatedPassword": new_password})
 
 
-REQUIRED_IMPORT_COLUMNS = [
-    "admission_number", "full_name", "class_arm", "gender",
-    "date_of_birth", "guardian_name", "guardian_phone", "guardian_email",
-]
+@api_bp.route("/students/<int:student_id>/password", methods=["GET"])
+@api_admin_required
+def get_student_password(student_id):
+    student = Student.query.get_or_404(student_id)
+    password = decrypt_password(student.password_encrypted)
+    return jsonify({"success": True, "password": password})  # password is null if unavailable
+
+
+@api_bp.route("/students/<int:student_id>/password", methods=["PUT"])
+@api_admin_required
+def set_student_password(student_id):
+    student = Student.query.get_or_404(student_id)
+    payload = request.get_json(silent=True) or {}
+    new_password = (payload.get("password") or "").strip()
+    if len(new_password) < 6:
+        return jsonify({"success": False, "message": "Password must be at least 6 characters."}), 400
+    student.set_password(new_password)
+    student.password_encrypted = encrypt_password(new_password)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+# full_name and class_arm are the only truly required columns — admission
+# number and the rest can be left blank and are auto-generated/omitted per
+# row (see import loop below), matching the single-add endpoint's behavior.
+REQUIRED_IMPORT_COLUMNS = ["full_name", "class_arm"]
 
 
 @api_bp.route("/students/import", methods=["POST"])
@@ -711,29 +769,28 @@ def import_students():
 
     for row_number, row in enumerate(reader, start=2):
         def col(name):
-            return (row.get(header_map[name]) or "").strip()
+            key = header_map.get(name)
+            if not key:
+                return ""
+            return (row.get(key) or "").strip()
 
         admission_number = col("admission_number")
         full_name = col("full_name")
         class_arm_name = col("class_arm")
 
-        if not admission_number or not full_name or not class_arm_name:
-            skipped.append({"row": row_number, "reason": "Missing required field."})
+        if not full_name or not class_arm_name:
+            skipped.append({"row": row_number, "reason": "Missing required field (full_name or class_arm)."})
             continue
 
-        if admission_number.lower() in existing_admission_numbers:
-            skipped.append({
-                "row": row_number,
-                "reason": f"Duplicate admission number {admission_number}",
-            })
-            continue
-
-        if admission_number.lower() in seen_in_file:
-            skipped.append({
-                "row": row_number,
-                "reason": f"Duplicate admission number {admission_number} (repeated in file)",
-            })
-            continue
+        if admission_number:
+            if admission_number.lower() in existing_admission_numbers or admission_number.lower() in seen_in_file:
+                skipped.append({
+                    "row": row_number,
+                    "reason": f"Duplicate admission number {admission_number}",
+                })
+                continue
+        else:
+            admission_number = _generate_admission_number(seen_in_file)
 
         arm = arms_by_display_name.get(class_arm_name.lower())
         if not arm:
@@ -753,7 +810,9 @@ def import_students():
             guardian_email=col("guardian_email") or None,
             class_arm_id=arm.id,
         )
-        student.set_password(secrets.token_urlsafe(8))
+        raw_password = secrets.token_urlsafe(8)
+        student.set_password(raw_password)
+        student.password_encrypted = encrypt_password(raw_password)
         db.session.add(student)
 
         seen_in_file.add(admission_number.lower())
@@ -774,6 +833,18 @@ def list_teachers():
     return jsonify({"success": True, "teachers": [serialize_teacher(t) for t in teachers]})
 
 
+def _generate_placeholder_email():
+    """Unique, obviously-not-real placeholder used when an admin adds a
+    teacher with just a name. Must be replaced with a real email later —
+    a teacher can't practically receive their login credentials until
+    then, but the account exists and a password is already set so nothing
+    blocks completing the rest of their profile."""
+    while True:
+        candidate = f"pending.{secrets.token_hex(4)}@placeholder.local"
+        if not Teacher.query.filter_by(email=candidate).first():
+            return candidate
+
+
 @api_bp.route("/teachers", methods=["POST"])
 @api_admin_required
 def create_teacher():
@@ -781,21 +852,27 @@ def create_teacher():
     full_name = (payload.get("fullName") or "").strip()
     email = (payload.get("email") or "").strip().lower()
 
-    if not full_name or not email:
-        return jsonify({"success": False, "message": "Full name and email are required."}), 400
+    if not full_name:
+        return jsonify({"success": False, "message": "Full name is required."}), 400
 
-    if Teacher.query.filter_by(email=email).first():
-        return jsonify({"success": False, "message": "That email is already in use."}), 409
+    email_auto_generated = not bool(email)
+    if email:
+        if Teacher.query.filter_by(email=email).first():
+            return jsonify({"success": False, "message": "That email is already in use."}), 409
+    else:
+        email = _generate_placeholder_email()
 
     teacher = Teacher(full_name=full_name, email=email)
     raw_password = payload.get("password") or secrets.token_urlsafe(8)
     teacher.set_password(raw_password)
+    teacher.password_encrypted = encrypt_password(raw_password)
 
     db.session.add(teacher)
     db.session.commit()
 
     response = serialize_teacher(teacher)
     response["generatedPassword"] = raw_password
+    response["emailAutoGenerated"] = email_auto_generated
     return jsonify({"success": True, "teacher": response}), 201
 
 
@@ -840,8 +917,31 @@ def reset_teacher_password(teacher_id):
     teacher = Teacher.query.get_or_404(teacher_id)
     new_password = secrets.token_urlsafe(8)
     teacher.set_password(new_password)
+    teacher.password_encrypted = encrypt_password(new_password)
     db.session.commit()
     return jsonify({"success": True, "generatedPassword": new_password})
+
+
+@api_bp.route("/teachers/<int:teacher_id>/password", methods=["GET"])
+@api_admin_required
+def get_teacher_password(teacher_id):
+    teacher = Teacher.query.get_or_404(teacher_id)
+    password = decrypt_password(teacher.password_encrypted)
+    return jsonify({"success": True, "password": password})  # password is null if unavailable
+
+
+@api_bp.route("/teachers/<int:teacher_id>/password", methods=["PUT"])
+@api_admin_required
+def set_teacher_password(teacher_id):
+    teacher = Teacher.query.get_or_404(teacher_id)
+    payload = request.get_json(silent=True) or {}
+    new_password = (payload.get("password") or "").strip()
+    if len(new_password) < 6:
+        return jsonify({"success": False, "message": "Password must be at least 6 characters."}), 400
+    teacher.set_password(new_password)
+    teacher.password_encrypted = encrypt_password(new_password)
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 # ---------------------------------------------------------------------------
@@ -1164,3 +1264,194 @@ def save_teacher_scores():
         "examMax": exam_max,
         "students": result,
     })
+
+# ---------------------------------------------------------------------------
+# FINALIZATION / RESULTS
+# ---------------------------------------------------------------------------
+
+@api_bp.route("/finalize/status", methods=["GET"])
+@api_admin_required
+def finalize_status():
+    active_session, active_term = _get_active_term()
+    if not active_session or not active_term:
+        return jsonify({
+            "success": True,
+            "activeTerm": None,
+            "activeSession": None,
+            "classes": [],
+        })
+
+    arms = (
+        ClassArm.query.join(ClassLevel, ClassArm.class_level_id == ClassLevel.id)
+        .order_by(ClassLevel.order, ClassArm.name)
+        .all()
+    )
+
+    classes = []
+    for arm in arms:
+        required_subjects = get_required_subjects(arm)
+        required_subject_count = len(required_subjects)
+        students = get_eligible_students(arm)
+        total_students = len(students)
+
+        complete_students = 0
+        incomplete_names = []
+        finalized_count = 0
+        for student in students:
+            complete = is_student_complete(student, required_subjects, active_term, active_session)
+            if complete:
+                complete_students += 1
+            else:
+                incomplete_names.append(student.full_name)
+
+            result = StudentTermResult.query.filter_by(
+                student_id=student.id, term_id=active_term.id, session_id=active_session.id
+            ).first()
+            if result and result.status == "finalized":
+                finalized_count += 1
+
+        is_finalized = total_students > 0 and finalized_count == total_students
+        can_finalize = total_students > 0 and required_subject_count > 0
+
+        classes.append({
+            "classArmId": arm.id,
+            "label": arm.display_name,
+            "totalStudents": total_students,
+            "completeStudents": complete_students,
+            "requiredSubjectCount": required_subject_count,
+            "isFinalized": is_finalized,
+            "canFinalize": can_finalize,
+            "incompleteStudentNames": [] if (is_finalized or complete_students == total_students) else incomplete_names,
+        })
+
+    return jsonify({
+        "success": True,
+        "activeTerm": active_term.name,
+        "activeSession": active_session.name,
+        "classes": classes,
+    })
+
+
+@api_bp.route("/finalize/<int:class_arm_id>", methods=["POST"])
+@api_admin_required
+def finalize_arm(class_arm_id):
+    arm = ClassArm.query.get_or_404(class_arm_id)
+    active_session, active_term = _get_active_term()
+
+    if not active_session or not active_term:
+        return jsonify({"success": False, "message": "No active session/term is configured."}), 400
+
+    required_subjects = get_required_subjects(arm)
+    if len(required_subjects) == 0:
+        return jsonify({"success": False, "message": "This class has no subjects assigned."}), 400
+
+    students = get_eligible_students(arm)
+    if len(students) == 0:
+        return jsonify({"success": False, "message": "This class has no active students."}), 400
+
+    incomplete_count = sum(
+        0 if is_student_complete(s, required_subjects, active_term, active_session) else 1
+        for s in students
+    )
+
+    computed = finalize_class_arm(arm, active_term, active_session)
+
+    return jsonify({
+        "success": True,
+        "finalizedCount": len(computed),
+        "incompleteCount": incomplete_count,
+    })
+
+
+@api_bp.route("/results/<int:class_arm_id>/overview", methods=["GET"])
+@api_admin_required
+def results_overview(class_arm_id):
+    arm = ClassArm.query.get_or_404(class_arm_id)
+    active_session, active_term = _get_active_term()
+
+    if not active_session or not active_term:
+        return jsonify({
+            "success": True,
+            "classArmLabel": arm.display_name,
+            "activeTerm": None,
+            "activeSession": None,
+            "isFinalized": False,
+            "results": [],
+        })
+
+    results = (
+        StudentTermResult.query.filter_by(
+            term_id=active_term.id, session_id=active_session.id, status="finalized"
+        )
+        .join(Student, StudentTermResult.student_id == Student.id)
+        .filter(Student.class_arm_id == arm.id, Student.is_active.is_(True))
+        .all()
+    )
+
+    is_finalized = len(results) > 0
+    results.sort(key=lambda r: (r.class_position if r.class_position is not None else 10 ** 9))
+
+    payload = [
+        {
+            "resultId": r.id,
+            "studentId": r.student_id,
+            "position": r.class_position,
+            "fullName": r.student.full_name,
+            "admissionNumber": r.student.admission_number,
+            "cumulativeTotal": r.cumulative_total,
+            "cumulativeAverage": r.cumulative_average,
+            "overallGrade": r.overall_grade,
+        }
+        for r in results
+    ]
+
+    return jsonify({
+        "success": True,
+        "classArmLabel": arm.display_name,
+        "activeTerm": active_term.name,
+        "activeSession": active_session.name,
+        "isFinalized": is_finalized,
+        "results": payload,
+    })
+
+
+# ---------------------------------------------------------------------------
+# PORTAL
+# ---------------------------------------------------------------------------
+
+@api_bp.route("/portal/student", methods=["GET"])
+@api_portal_required
+def portal_student():
+    student = Student.query.get_or_404(session["studentonline"])
+    return jsonify({
+        "success": True,
+        "student": {
+            "fullName": student.full_name,
+            "admissionNumber": student.admission_number,
+            "classLabel": student.class_arm.display_name if student.class_arm else None,
+        },
+    })
+
+
+@api_bp.route("/portal/finalized-terms", methods=["GET"])
+@api_portal_required
+def portal_finalized_terms():
+    student_id = session["studentonline"]
+    results = (
+        StudentTermResult.query.filter_by(student_id=student_id, status="finalized")
+        .order_by(StudentTermResult.finalized_at.desc())
+        .all()
+    )
+
+    terms = [
+        {
+            "resultId": r.id,
+            "termLabel": r.term.name,
+            "sessionLabel": r.session.name,
+            "average": r.cumulative_average,
+            "grade": r.overall_grade,
+        }
+        for r in results
+    ]
+
+    return jsonify({"success": True, "terms": terms})

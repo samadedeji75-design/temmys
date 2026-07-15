@@ -97,7 +97,7 @@ $(function () {
     const id = $("#subjectId").val();
     const name = $("#subjectName").val().trim();
     const code = $("#subjectCode").val().trim();
-    if (!name || !code) return;
+    if (!name) return;
 
     $saveBtn.prop("disabled", true).find(".btn-spinner").show();
 

@@ -1,7 +1,7 @@
-﻿{% extends "shared/base.html" %}
-{% set role = 'student' %}
-{% set active_page = 'results' %}
-{% set page_title = 'Result' %}
+{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'class_results' %}
+{% set page_title = 'Student Result' %}
 {% block title %}Result — {{ student.full_name }}{% endblock %}
 
 {% block extra_css %}
@@ -11,11 +11,11 @@
 
 {% block content %}
 <div class="d-flex align-center gap-2 mb-4">
-  <a href="/portal/dashboard" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Dashboard</a>
+  <a href="{{ url_for('admin.class_result_overview', arm_id=class_arm.id) }}" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Class Result Overview</a>
 </div>
 
 <div class="d-flex justify-between align-center mb-4" style="flex-wrap: wrap; gap: var(--space-3);">
-  <h1 class="page-title mb-0">{{ term.name }} Result</h1>
+  <h1 class="page-title mb-0">{{ term.name }} Result — {{ student.full_name }}</h1>
   <button type="button" class="btn btn-primary" id="downloadPdfBtn">
     <span class="btn-label"><i class="bi bi-file-earmark-pdf"></i> Download PDF</span>
   </button>
@@ -29,5 +29,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/portal/portal.js"></script>
+<script src="/static/js/admin/student-result.js"></script>
 {% endblock %}
