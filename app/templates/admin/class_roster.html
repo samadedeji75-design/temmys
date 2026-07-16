@@ -9,7 +9,12 @@
   <a href="{{ url_for('admin.classes_list') }}" class="btn-link" style="color: var(--color-text-muted);"><i class="bi bi-arrow-left"></i> Classes</a>
 </div>
 
-<h1 class="section-title mb-4">{{ class_arm_name }} — Students</h1>
+<div class="d-flex justify-between align-center mb-4">
+  <h1 class="section-title mb-0">{{ class_arm_name }} — Students</h1>
+  <a href="{{ url_for('admin.class_students_credentials_pdf', arm_id=class_arm_id) }}" class="btn btn-secondary">
+    <i class="bi bi-file-earmark-lock"></i> Download Credentials (PDF)
+  </a>
+</div>
 
 <div class="card">
   <div class="card-body">

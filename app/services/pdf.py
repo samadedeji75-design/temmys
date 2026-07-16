@@ -1,7 +1,9 @@
 """
 app/services/pdf.py
 
-ReportLab PDF generation for the student result document (Phase 7).
+ReportLab PDF generation for the student result document (Phase 7), plus
+the student login-credentials export (added alongside the teacher-email
+feature).
 
 Built entirely on top of app.services.results.build_result_context() —
 this module does not independently re-query Score/ClassSubject/etc.
@@ -261,6 +263,73 @@ def build_batch_result_pdf(results):
         if i > 0:
             flowables.append(PageBreak())
         flowables.extend(_build_result_flowables(result, school_config, ca_max, exam_max))
+
+    doc.build(flowables)
+    buffer.seek(0)
+    return buffer
+
+
+def build_student_credentials_pdf(students, decrypt_password_fn):
+    """
+    students: list of Student rows (any scope the caller chooses — one
+    class arm, or the whole school).
+    decrypt_password_fn: pass app.services.security.decrypt_password —
+    kept as a parameter rather than imported directly so this module
+    doesn't need to know about security.py, matching how the rest of
+    this file only depends on app.models + app.services.results.
+
+    One row per student: name, admission number, class, and their
+    plaintext password (recovered from password_encrypted). Intended for
+    printing and handing to parents at resumption/registration — NOT for
+    routine distribution or emailing in bulk, since it's a plaintext
+    password dump. Treat the generated PDF itself as sensitive: don't
+    leave printed copies lying around, and delete the file after
+    distributing.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        topMargin=16 * mm, bottomMargin=16 * mm, leftMargin=16 * mm, rightMargin=16 * mm,
+    )
+
+    school_config = SchoolConfig.query.first()
+    school_name = school_config.school_name if school_config else "School"
+
+    flowables = [
+        Paragraph(school_name, _school_name_style),
+        Paragraph("Student Portal Login Credentials", _doc_title_style),
+        Paragraph("Confidential — for distribution to parents/guardians only.", _term_line_style),
+        Spacer(1, 6),
+    ]
+
+    header = ["Student Name", "Admission No.", "Class", "Password"]
+    rows = [header]
+    sorted_students = sorted(
+        students,
+        key=lambda s: (s.class_arm.display_name if s.class_arm else "", s.full_name),
+    )
+    for student in sorted_students:
+        password = decrypt_password_fn(student.password_encrypted) or "(reset required)"
+        rows.append([
+            student.full_name,
+            student.admission_number,
+            student.class_arm.display_name if student.class_arm else "—",
+            password,
+        ])
+
+    table = Table(rows, colWidths=[55 * mm, 35 * mm, 35 * mm, 35 * mm], repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a3c6e")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    flowables.append(table)
 
     doc.build(flowables)
     buffer.seek(0)

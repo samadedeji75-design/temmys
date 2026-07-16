@@ -170,3 +170,37 @@ def class_result_batch_pdf(arm_id):
     pdf_buffer = build_batch_result_pdf(results)
     filename = safe_filename(f"{arm.display_name}_batch_results.pdf")
     return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
+@admin_bp.route("/students/credentials-pdf")
+@admin_required
+def all_students_credentials_pdf():
+    """Whole-school export — every active student, name/admission/password,
+    sorted by class then name inside the PDF itself. Intended for a full
+    print run, e.g. at term resumption, to hand out to parents."""
+    from app.services.pdf import build_student_credentials_pdf
+    from app.services.security import decrypt_password
+
+    students = Student.query.filter_by(is_active=True).all()
+    pdf_buffer = build_student_credentials_pdf(students, decrypt_password)
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="student_login_credentials.pdf",
+    )
+
+
+@admin_bp.route("/classes/<int:arm_id>/students/credentials-pdf")
+@admin_required
+def class_students_credentials_pdf(arm_id):
+    """Same document, scoped to one class arm — for handing out credentials
+    one class at a time instead of the whole school in one print run."""
+    from app.services.pdf import build_student_credentials_pdf, safe_filename
+    from app.services.security import decrypt_password
+
+    arm = ClassArm.query.get_or_404(arm_id)
+    students = Student.query.filter_by(class_arm_id=arm.id, is_active=True).all()
+    pdf_buffer = build_student_credentials_pdf(students, decrypt_password)
+    filename = safe_filename(f"{arm.display_name}_credentials.pdf")
+    return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)

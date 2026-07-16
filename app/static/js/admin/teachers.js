@@ -100,6 +100,33 @@ $(function () {
         openPasswordManager(t);
       });
 
+      row.querySelector(".js-send-credentials-email").addEventListener("click", function () {
+        closeAllDropdowns();
+        if (t.emailIsPlaceholder) {
+          window.showToast("This teacher doesn't have a real email yet — edit their profile first.", "error");
+          return;
+        }
+        window.confirmAction({
+          title: "Send credentials email?",
+          body: "This will email " + t.fullName + " (" + t.email + ") their login details and current class/subject assignments.",
+          confirmLabel: "Send Email",
+          onConfirm: function () {
+            window.apiRequest("POST", "/api/teachers/" + t.id + "/send-credentials-email")
+              .done(function (response) {
+                if (response && response.success) {
+                  window.showToast(response.message || "Credentials email sent.", "success");
+                } else {
+                  window.showToast((response && response.message) || "Could not send email.", "error");
+                }
+              })
+              .fail(function (xhr) {
+                const message = (xhr.responseJSON && xhr.responseJSON.message) || "Could not send email.";
+                window.showToast(message, "error");
+              });
+          }
+        });
+      });
+
       row.querySelector(".js-deactivate-teacher").addEventListener("click", function () {
         closeAllDropdowns();
         const willDeactivate = t.isActive;

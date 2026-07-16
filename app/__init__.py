@@ -3,6 +3,7 @@ from flask import Flask, render_template, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from flask_mail import Mail
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import config
@@ -10,6 +11,7 @@ from config import config
 
 migrate = Migrate()
 csrf = CSRFProtect()
+mail = Mail()
 
 
 def create_app(config_name=None):
@@ -38,6 +40,7 @@ def create_app(config_name=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    mail.init_app(app)
 
     from app.admin import admin_bp
     from app.teacher import teacher_bp
