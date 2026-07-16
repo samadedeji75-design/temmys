@@ -49,16 +49,13 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
 
-    # Flask-Mail — used to send teacher login-credential emails. All
-    # values come from the environment; nothing here works until you set
-    # real SMTP credentials on Railway (e.g. a Gmail app password, or a
-    # transactional provider like Brevo/SendGrid/Mailgun's SMTP endpoint).
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
+    # Email — sent via Resend's HTTP API (see app/services/email.py), not
+    # raw SMTP. Railway (and most PaaS platforms) blocks outbound SMTP
+    # ports at the network level, so smtplib connections hang and time
+    # out no matter how correct the credentials are. Resend uses normal
+    # HTTPS, which is never blocked.
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "onboarding@resend.dev")
 
 
 class DevelopmentConfig(Config):
