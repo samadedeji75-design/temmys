@@ -83,8 +83,11 @@ def create_app(config_name=None):
 
     @app.route("/")
     def index():
-        # No public landing page yet — send visitors to the admin login.
-        return redirect(url_for("auth.admin_login"))
+        # No public landing page yet — send visitors to the parent/student
+        # portal login (the login most people hitting the bare domain will
+        # want). Admin and teacher each still have their own login route,
+        # linked to from the portal login page and reachable directly.
+        return redirect(url_for("auth.portal_login"))
 
     @app.errorhandler(404)
     def not_found_error(error):

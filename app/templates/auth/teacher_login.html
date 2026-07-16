@@ -50,7 +50,10 @@
       </button>
     </form>
 
-    <div class="auth-footer-note">{{ school_config.school_name }} &middot; Result Management System</div>
+    <div class="auth-footer-note">
+      {{ school_config.school_name }} &middot; Result Management System<br>
+      <a href="{{ url_for('auth.portal_login') }}">Parent/Student login</a>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
