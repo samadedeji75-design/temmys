@@ -7,14 +7,39 @@ basedir = Path(__file__).resolve().parent
 load_dotenv(basedir / ".env")
 
 
+def _build_database_uri():
+    """
+    Prefer a single DATABASE_URL if one is set (e.g. you paste Railway's
+    MySQL URL in directly, with the dialect prefix fixed up). Otherwise
+    build it from Railway's individual MYSQL* variables, which it always
+    provides for a linked MySQL plugin. Falls back to a local dev DB if
+    neither is present.
+
+    Uses mysql-connector-python (mysql+mysqlconnector://) everywhere,
+    matching the single driver actually pinned in requirements.txt.
+    """
+    url = os.getenv("DATABASE_URL")
+    if url:
+        return url
+
+    mysql_user = os.getenv("MYSQLUSER")
+    mysql_password = os.getenv("MYSQLPASSWORD")
+    mysql_host = os.getenv("MYSQLHOST")
+    mysql_port = os.getenv("MYSQLPORT")
+    mysql_db = os.getenv("MYSQL_DATABASE") or os.getenv("MYSQLDATABASE")
+
+    if mysql_user and mysql_host and mysql_db:
+        return (
+            f"mysql+mysqlconnector://{mysql_user}:{mysql_password}"
+            f"@{mysql_host}:{mysql_port}/{mysql_db}"
+        )
+
+    return "mysql+mysqlconnector://root@localhost/temmys_db1"
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-
-    # Falls back to the local MySQL dev DB only if DATABASE_URL isn't set —
-    # in any real deployment, DATABASE_URL from the environment wins.
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "mysql+mysqlconnector://root@localhost/temmys_db1"
-    )
+    SQLALCHEMY_DATABASE_URI = _build_database_uri()
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
@@ -40,16 +65,6 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True  # requires the app actually served over HTTPS
-    ADMIN_EMAIL="admin@temmys.com"
-    ADMIN_PASSWORD="admin123"
-    SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://"
-        f"{os.getenv('MYSQLUSER')}:"
-        f"{os.getenv('MYSQLPASSWORD')}@"
-        f"{os.getenv('MYSQLHOST')}:"
-        f"{os.getenv('MYSQLPORT')}/"
-        f"{os.getenv('MYSQL_DATABASE')}"
-)
 
 
 config = {
