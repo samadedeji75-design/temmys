@@ -204,3 +204,22 @@ def class_students_credentials_pdf(arm_id):
     pdf_buffer = build_student_credentials_pdf(students, decrypt_password)
     filename = safe_filename(f"{arm.display_name}_credentials.pdf")
     return send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
+@admin_bp.route("/teachers/credentials-pdf")
+@admin_required
+def all_teachers_credentials_pdf():
+    """Same idea as all_students_credentials_pdf, for teachers: every
+    active teacher, name/email/password, one-click download for a full
+    staff print run."""
+    from app.services.pdf import build_teacher_credentials_pdf
+    from app.services.security import decrypt_password
+
+    teachers = Teacher.query.filter_by(is_active=True).all()
+    pdf_buffer = build_teacher_credentials_pdf(teachers, decrypt_password)
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="teacher_login_credentials.pdf",
+    )

@@ -7,9 +7,14 @@
 {% block content %}
 <div class="d-flex justify-between align-center mb-4">
   <h1 class="page-title mb-0">Teachers</h1>
-  <button type="button" class="btn btn-primary" id="addTeacherBtn">
-    <i class="bi bi-person-plus"></i> Add Teacher
-  </button>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.all_teachers_credentials_pdf') }}" class="btn btn-secondary">
+      <i class="bi bi-file-earmark-lock"></i> Download Credentials (PDF)
+    </a>
+    <button type="button" class="btn btn-primary" id="addTeacherBtn">
+      <i class="bi bi-person-plus"></i> Add Teacher
+    </button>
+  </div>
 </div>
 
 <div class="card">

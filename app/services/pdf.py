@@ -318,6 +318,40 @@ def build_student_credentials_pdf(students, decrypt_password_fn):
         ])
 
     table = Table(rows, colWidths=[55 * mm, 35 * mm, 35 * mm, 35 * mm], repeatRows=1)
+def build_teacher_credentials_pdf(teachers, decrypt_password_fn):
+    """
+    Same idea as build_student_credentials_pdf, for teachers: name, email,
+    and plaintext password (recovered from password_encrypted). Same
+    handling-sensitivity note applies — this is a plaintext password dump,
+    intended for a one-time handout, not routine distribution.
+    """
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        topMargin=16 * mm, bottomMargin=16 * mm, leftMargin=16 * mm, rightMargin=16 * mm,
+    )
+
+    school_config = SchoolConfig.query.first()
+    school_name = school_config.school_name if school_config else "School"
+
+    flowables = [
+        Paragraph(school_name, _school_name_style),
+        Paragraph("Teacher Portal Login Credentials", _doc_title_style),
+        Paragraph("Confidential — for distribution to teaching staff only.", _term_line_style),
+        Spacer(1, 6),
+    ]
+
+    header = ["Teacher Name", "Email", "Password"]
+    rows = [header]
+    sorted_teachers = sorted(teachers, key=lambda t: t.full_name)
+    for teacher in sorted_teachers:
+        password = decrypt_password_fn(teacher.password_encrypted) or "(reset required)"
+        email = teacher.email
+        if email.endswith("@placeholder.local"):
+            email += "  [placeholder — not a real inbox]"
+        rows.append([teacher.full_name, email, password])
+
+    table = Table(rows, colWidths=[55 * mm, 75 * mm, 30 * mm], repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a3c6e")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
