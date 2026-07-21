@@ -188,8 +188,8 @@ def _build_result_flowables(result, school_config, ca_max, exam_max):
     remark_rows = [
         [Paragraph("Class Teacher's Remark", _section_label_style),
          Paragraph("Principal's Remark", _section_label_style)],
-        [Paragraph(result.class_teacher_remark or "", _styles["Normal"]),
-         Paragraph(result.principal_remark or "", _styles["Normal"])],
+        [Paragraph(result.class_teacher_remark or "Good performance", _styles["Normal"]),
+         Paragraph(result.principal_remark or "Satisfactory", _styles["Normal"])],
     ]
     remark_table = Table(remark_rows, colWidths=["50%", "50%"])
     remark_table.setStyle(TableStyle([
