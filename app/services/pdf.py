@@ -105,7 +105,7 @@ def _build_result_flowables(result, school_config, ca_max, exam_max):
     flow.append(Spacer(1, 4))
     flow.append(rule_table)
 
-    flow.append(Paragraph("STUDENT TERMINAL REPORT SHEET", _doc_title_style))
+    flow.append(Paragraph("STUDENT REPORT SHEET", _doc_title_style))
     flow.append(Paragraph(f"{term.name} — {sess.name} Session", _term_line_style))
 
     # -- Student info ----------------------------------------------------
@@ -130,15 +130,12 @@ def _build_result_flowables(result, school_config, ca_max, exam_max):
     flow.append(Spacer(1, 10))
 
     # -- Subject table -----------------------------------------------------
-    header = ["Subject", "CA1", "CA2", "CA3", f"CA Total\n/{ca_max}", f"Exam\n/{exam_max}",
+    header = ["Subject", f"CA Total\n/{ca_max}", f"Exam\n/{exam_max}",
               f"Total\n/{ca_max + exam_max}", "Grade", "Remark"]
     table_data = [header]
     for row in subject_rows:
         table_data.append([
             row["subject_name"],
-            _dash_if_none(row["ca1"]),
-            _dash_if_none(row["ca2"]),
-            _dash_if_none(row["ca3"]),
             _dash_if_none(row["ca_total"]),
             _dash_if_none(row["exam_score"]),
             _dash_if_none(row["subject_total"]),
@@ -148,7 +145,7 @@ def _build_result_flowables(result, school_config, ca_max, exam_max):
 
     subject_table = Table(
         table_data,
-        colWidths=[32 * mm, 12 * mm, 12 * mm, 12 * mm, 18 * mm, 16 * mm, 16 * mm, 14 * mm, 28 * mm],
+        colWidths=[32 * mm, 18 * mm, 16 * mm, 16 * mm, 14 * mm, 28 * mm],
         repeatRows=1,
     )
     subject_table.setStyle(TableStyle([
