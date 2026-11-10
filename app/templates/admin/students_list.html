@@ -11,6 +11,13 @@
     <a href="{{ url_for('admin.all_students_credentials_pdf') }}" class="btn btn-secondary">
       <i class="bi bi-file-earmark-lock"></i> Download Credentials (PDF)
     </a>
+    <form method="post" action="{{ url_for('admin.reset_unreadable_student_passwords') }}"
+          onsubmit="return confirm('Give new passwords to every student whose password cannot be read, then download the PDF? Those students\' old passwords will stop working. Students with a readable password are not changed.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">
+        <i class="bi bi-key"></i> Reset Unreadable and Download PDF
+      </button>
+    </form>
     <a href="{{ url_for('admin.students_import') }}" class="btn btn-secondary">
       <i class="bi bi-upload"></i> Import CSV
     </a>
