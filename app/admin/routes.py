@@ -223,3 +223,45 @@ def all_teachers_credentials_pdf():
         as_attachment=True,
         download_name="teacher_login_credentials.pdf",
     )
+
+
+@admin_bp.route("/students/reset-unreadable-passwords", methods=["POST"])
+@admin_required
+def reset_unreadable_student_passwords():
+    """Gives a fresh password to every active student whose current
+    password can't be read back (no usable stored copy), leaves students
+    with a readable password untouched, then returns the credentials PDF.
+    Optional form field arm_id limits it to one class."""
+    import secrets
+    from flask import request
+    from cryptography.fernet import InvalidToken
+    from app.models import db
+    from app.services.pdf import build_student_credentials_pdf, safe_filename
+    from app.services.security import encrypt_password, decrypt_password
+
+    arm_id = request.form.get("arm_id", type=int)
+    query = Student.query.filter_by(is_active=True)
+    filename = "student_login_credentials.pdf"
+    if arm_id:
+        arm = ClassArm.query.get_or_404(arm_id)
+        query = query.filter_by(class_arm_id=arm.id)
+        filename = safe_filename(f"{arm.display_name}_credentials.pdf")
+    students = query.all()
+
+    for student in students:
+        try:
+            readable = decrypt_password(student.password_encrypted)
+        except InvalidToken:
+            readable = None
+        if readable:
+            continue
+        new_password = secrets.token_urlsafe(8)
+        student.set_password(new_password)
+        student.password_encrypted = encrypt_password(new_password)
+
+    db.session.commit()
+
+    pdf_buffer = build_student_credentials_pdf(students, decrypt_password)
+    response = send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
+    response.headers["Cache-Control"] = "no-store"
+    return response
