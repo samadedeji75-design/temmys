@@ -316,6 +316,24 @@ def build_student_credentials_pdf(students, decrypt_password_fn):
         ])
 
     table = Table(rows, colWidths=[55 * mm, 35 * mm, 35 * mm, 35 * mm], repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a3c6e")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    flowables.append(table)
+
+    doc.build(flowables)
+    buffer.seek(0)
+    return buffer
+
+
 def build_teacher_credentials_pdf(teachers, decrypt_password_fn):
     """
     Same idea as build_student_credentials_pdf, for teachers: name, email,
