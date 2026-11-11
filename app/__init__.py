@@ -12,6 +12,31 @@ migrate = Migrate()
 csrf = CSRFProtect()
 
 
+def _ensure_class_arm_column(app, db):
+    """Safety net: adds student_term_result.class_arm_id (and backfills it)
+    if the database has not been migrated yet. Without this column every
+    results query fails with a 500. Safe to run on every start."""
+    from sqlalchemy import inspect, text
+    try:
+        with app.app_context():
+            insp = inspect(db.engine)
+            if "student_term_result" not in insp.get_table_names():
+                return
+            cols = {c["name"] for c in insp.get_columns("student_term_result")}
+            if "class_arm_id" in cols:
+                return
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE student_term_result ADD COLUMN class_arm_id INTEGER"))
+                conn.execute(text(
+                    "UPDATE student_term_result SET class_arm_id = "
+                    "(SELECT class_arm_id FROM student WHERE student.id = student_term_result.student_id) "
+                    "WHERE class_arm_id IS NULL"
+                ))
+            app.logger.warning("Added missing student_term_result.class_arm_id column")
+    except Exception as exc:  # never block startup
+        app.logger.error("Could not ensure class_arm_id column: %s", exc)
+
+
 def create_app(config_name=None):
     from app.models import db
     if config_name is None:
@@ -38,6 +63,8 @@ def create_app(config_name=None):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+
+    _ensure_class_arm_column(app, db)
 
     from app.admin import admin_bp
     from app.teacher import teacher_bp
