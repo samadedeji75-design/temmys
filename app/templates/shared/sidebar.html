@@ -41,6 +41,8 @@
       <li class="sidebar-nav-section">People</li>
       <li><a class="sidebar-nav-link {% if active_page == 'students' %}active{% endif %}" href="{{ url_for('admin.students_list') }}">
         <i class="bi bi-mortarboard"></i> Students</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'promote' %}active{% endif %}" href="{{ url_for('admin.students_promote') }}">
+        <i class="bi bi-arrow-up-circle"></i> Promote Students</a></li>
       <li><a class="sidebar-nav-link {% if active_page == 'teachers' %}active{% endif %}" href="{{ url_for('admin.teachers_list') }}">
         <i class="bi bi-person-workspace"></i> Teachers</a></li>
       <li><a class="sidebar-nav-link {% if active_page == 'assignments' %}active{% endif %}" href="{{ url_for('admin.teacher_assignments') }}">

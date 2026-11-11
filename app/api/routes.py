@@ -1608,3 +1608,181 @@ def portal_finalized_terms():
     ]
 
     return jsonify({"success": True, "terms": terms})
+
+@api_bp.route("/portal/dashboard", methods=["GET"])
+@api_portal_required
+def portal_dashboard():
+    """Everything the student dashboard needs in one request: each
+    finalized term (oldest first) with its subject breakdown. Only reads
+    the logged-in student's own rows."""
+    from sqlalchemy.orm import joinedload
+
+    student = Student.query.get_or_404(session["studentonline"])
+
+    results = (
+        StudentTermResult.query
+        .options(joinedload(StudentTermResult.term), joinedload(StudentTermResult.session))
+        .filter_by(student_id=student.id, status="finalized")
+        .all()
+    )
+    results.sort(key=lambda r: (r.session.name, r.term.order))
+
+    scale = GradingScale.query.order_by(GradingScale.min_score.desc()).all()
+
+    def grade_for(total):
+        for band in scale:
+            if total >= band.min_score:
+                return band.grade, band.remark
+        return None, None
+
+    required_cache = {}
+
+    def required_ids_for(arm_id):
+        if arm_id not in required_cache:
+            required_cache[arm_id] = {
+                cs.subject_id for cs in ClassSubject.query.filter_by(class_arm_id=arm_id).all()
+            }
+        return required_cache[arm_id]
+
+    scores = (
+        Score.query.options(joinedload(Score.subject))
+        .filter_by(student_id=student.id)
+        .all()
+    )
+    scores_by_term = {}
+    for sc in scores:
+        scores_by_term.setdefault((sc.term_id, sc.session_id), []).append(sc)
+
+    terms = []
+    for r in results:
+        arm_id = r.class_arm_id or student.class_arm_id
+        required_ids = required_ids_for(arm_id)
+        if r.class_arm_id:
+            class_size = StudentTermResult.query.filter_by(
+                class_arm_id=arm_id, term_id=r.term_id, session_id=r.session_id, status="finalized"
+            ).count()
+        else:
+            class_size = Student.query.filter_by(class_arm_id=arm_id, is_active=True).count()
+
+        rows = scores_by_term.get((r.term_id, r.session_id), [])
+        if required_ids:
+            rows = [sc for sc in rows if sc.subject_id in required_ids]
+
+        subjects = []
+        for sc in sorted(rows, key=lambda x: x.subject.name):
+            grade, remark = grade_for(sc.subject_total)
+            subjects.append({
+                "name": sc.subject.name,
+                "ca": sc.ca_total,
+                "exam": sc.exam_score or 0,
+                "total": sc.subject_total,
+                "grade": grade,
+                "remark": remark,
+            })
+
+        divisor = len(required_ids) or len(subjects)
+        term_average = round(sum(s["total"] for s in subjects) / divisor, 1) if divisor else 0.0
+
+        terms.append({
+            "resultId": r.id,
+            "termLabel": r.term.name,
+            "sessionLabel": r.session.name,
+            "termOrder": r.term.order,
+            "isSessionCumulative": r.term.order == 3,
+            "average": r.cumulative_average,
+            "termAverage": term_average,
+            "total": r.cumulative_total,
+            "grade": r.overall_grade,
+            "position": r.class_position,
+            "classSize": class_size,
+            "classTeacherRemark": r.class_teacher_remark,
+            "principalRemark": r.principal_remark,
+            "subjects": subjects,
+        })
+
+    return jsonify({
+        "success": True,
+        "student": {
+            "fullName": student.full_name,
+            "classLabel": student.class_arm.display_name if student.class_arm else None,
+            "admissionNumber": student.admission_number,
+        },
+        "terms": terms,
+    })
+
+
+@api_bp.route("/students/promote", methods=["POST"])
+@api_admin_required
+def promote_students():
+    """Moves a group of students from one class arm to another.
+    Past report cards are not affected (each result remembers the class it
+    was finalized in)."""
+    payload = request.get_json(silent=True) or {}
+    student_ids = payload.get("studentIds")
+    target_id = payload.get("targetClassArmId")
+
+    if not isinstance(student_ids, list) or not student_ids or not target_id:
+        return jsonify({"success": False, "message": "Select at least one student and the class to move them to."}), 400
+
+    try:
+        student_ids = sorted({int(i) for i in student_ids})
+        target_id = int(target_id)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Invalid selection."}), 400
+
+    target = ClassArm.query.get(target_id)
+    if not target:
+        return jsonify({"success": False, "message": "That class does not exist."}), 404
+
+    students = Student.query.filter(Student.id.in_(student_ids)).all()
+    if len(students) != len(student_ids):
+        return jsonify({"success": False, "message": "Some of the selected students could not be found."}), 404
+
+    if any(not s.is_active for s in students):
+        return jsonify({"success": False, "message": "Inactive students cannot be promoted. Reactivate them first."}), 400
+
+    source_ids = {s.class_arm_id for s in students}
+    if len(source_ids) != 1:
+        return jsonify({"success": False, "message": "Select students from one class at a time."}), 400
+    if source_ids.pop() == target.id:
+        return jsonify({"success": False, "message": "Those students are already in that class."}), 400
+
+    # Safety: do not move students who have scores in the current term that
+    # has not been finalized yet, or those scores would be orphaned from the
+    # class that is about to be finalized.
+    active_session, active_term = _get_active_term()
+    if active_session and active_term:
+        with_scores = {
+            sid for (sid,) in db.session.query(Score.student_id)
+            .filter(
+                Score.student_id.in_(student_ids),
+                Score.term_id == active_term.id,
+                Score.session_id == active_session.id,
+            )
+            .distinct()
+        }
+        finalized = {
+            sid for (sid,) in db.session.query(StudentTermResult.student_id)
+            .filter(
+                StudentTermResult.student_id.in_(student_ids),
+                StudentTermResult.term_id == active_term.id,
+                StudentTermResult.session_id == active_session.id,
+                StudentTermResult.status == "finalized",
+            )
+        }
+        blocked = with_scores - finalized
+        if blocked:
+            return jsonify({
+                "success": False,
+                "message": f"{len(blocked)} of the selected students have scores in the current term, which is not finalized yet. Finalize the term first, then promote.",
+            }), 409
+
+    for student in students:
+        student.class_arm_id = target.id
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"{len(students)} student(s) moved to {target.display_name}.",
+        "moved": len(students),
+    })

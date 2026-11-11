@@ -1,0 +1,110 @@
+/* portal-dashboard.css
+   Styles for the interactive student dashboard (#insights section).
+   Uses the design tokens from base.css. Mobile-first: one or two columns
+   on phones, wider grids from 768px up. */
+
+#insights { margin-bottom: var(--space-6); }
+
+.pd-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.pd-stat {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(231, 237, 246, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pd-stat-label { font-size: var(--font-size-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.pd-stat-value { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-primary); line-height: 1.2; }
+.pd-stat-sub { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.pd-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.pd-panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.pd-panel-head h2 { font-size: var(--font-size-lg); color: var(--color-text); margin: 0; }
+.pd-hint { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.pd-chart-wrap { position: relative; height: 240px; }
+.pd-chart-wrap canvas { max-width: 100%; }
+
+.pd-pills { display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-2); margin-bottom: var(--space-4); -webkit-overflow-scrolling: touch; }
+.pd-pill {
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.pd-pill:hover { border-color: var(--color-accent); }
+.pd-pill.active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-on-primary); }
+
+.pd-detail-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.pd-detail-title { font-size: var(--font-size-lg); margin: 0; color: var(--color-primary); }
+.pd-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.pd-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+.pd-fact { background: var(--color-surface-alt); border-radius: var(--radius-md); padding: var(--space-3); }
+.pd-fact-label { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.pd-fact-value { font-weight: 700; color: var(--color-text); }
+
+.pd-highlights { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-4); }
+.pd-highlight { font-size: var(--font-size-xs); border-radius: 999px; padding: var(--space-1) var(--space-3); font-weight: 600; }
+.pd-highlight-good { background: var(--color-success-bg); color: var(--color-success); }
+.pd-highlight-low { background: var(--color-warning-bg); color: var(--color-warning); }
+
+.pd-subjects { display: flex; flex-direction: column; gap: var(--space-4); }
+.pd-subject-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+.pd-subject-name { font-weight: 600; color: var(--color-text); }
+.pd-subject-right { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.pd-subject-score { font-weight: 700; min-width: 2.2em; text-align: right; }
+.pd-subject-meta { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: var(--space-1); }
+
+.pd-bar { height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
+.pd-bar-fill { height: 100%; border-radius: 999px; transition: width var(--transition-base); }
+.pd-tone-good { background: var(--color-success); }
+.pd-tone-ok { background: var(--color-accent); }
+.pd-tone-low { background: var(--color-warning); }
+.pd-tone-poor { background: var(--color-danger); }
+
+.pd-chip { font-size: var(--font-size-xs); font-weight: 700; border-radius: var(--radius-sm); padding: 2px 8px; min-width: 2.2em; text-align: center; }
+.pd-chip-good { background: var(--color-success-bg); color: var(--color-success); }
+.pd-chip-ok { background: var(--color-info-bg); color: var(--color-info); }
+.pd-chip-low { background: var(--color-warning-bg); color: var(--color-warning); }
+.pd-chip-poor { background: var(--color-danger-bg); color: var(--color-danger); }
+
+.pd-delta { font-size: var(--font-size-xs); font-weight: 600; white-space: nowrap; }
+.pd-delta-up { color: var(--color-success); }
+.pd-delta-down { color: var(--color-danger); }
+.pd-delta-none { color: var(--color-text-muted); }
+
+.pd-remark { margin-top: var(--space-4); background: var(--color-primary-light); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.pd-remark-label { font-size: var(--font-size-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.pd-remark-text { margin: var(--space-1) 0 0; color: var(--color-text); }
+
+.pd-empty { color: var(--color-text-muted); }
+
+@media (min-width: 768px) {
+  .pd-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pd-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pd-chart-wrap { height: 280px; }
+}

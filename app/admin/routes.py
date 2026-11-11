@@ -156,10 +156,18 @@ def class_result_batch_pdf(arm_id):
     from app.services.pdf import build_batch_result_pdf, safe_filename
 
     arm = ClassArm.query.get_or_404(arm_id)
+    from sqlalchemy import and_, or_
+
     results = (
         StudentTermResult.query.filter_by(status="finalized")
         .join(Student, StudentTermResult.student_id == Student.id)
-        .filter(Student.class_arm_id == arm.id, Student.is_active.is_(True))
+        .filter(
+            or_(
+                StudentTermResult.class_arm_id == arm.id,
+                and_(StudentTermResult.class_arm_id.is_(None), Student.class_arm_id == arm.id),
+            ),
+            Student.is_active.is_(True),
+        )
         .all()
     )
     results.sort(key=lambda r: (r.class_position if r.class_position is not None else 10 ** 9))
@@ -224,7 +232,6 @@ def all_teachers_credentials_pdf():
         download_name="teacher_login_credentials.pdf",
     )
 
-
 @admin_bp.route("/students/reset-unreadable-passwords", methods=["POST"])
 @admin_required
 def reset_unreadable_student_passwords():
@@ -265,3 +272,9 @@ def reset_unreadable_student_passwords():
     response = send_file(pdf_buffer, mimetype="application/pdf", as_attachment=True, download_name=filename)
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@admin_bp.route("/students/promote")
+@admin_required
+def students_promote():
+    return render_template("admin/students_promote.html", role="admin", active_page="promote")

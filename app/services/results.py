@@ -169,6 +169,7 @@ def finalize_class_arm(arm, term, sess):
             if not result:
                 result = StudentTermResult(student_id=student.id, term_id=term.id, session_id=sess.id)
                 db.session.add(result)
+            result.class_arm_id = arm.id
             result.cumulative_total = session_total
             result.cumulative_average = session_average
             result.overall_grade = session_grade
@@ -190,6 +191,7 @@ def finalize_class_arm(arm, term, sess):
         if not result:
             result = StudentTermResult(student_id=student.id, term_id=term.id, session_id=sess.id)
             db.session.add(result)
+        result.class_arm_id = arm.id
         result.cumulative_total = total
         result.cumulative_average = average
         result.overall_grade = grade
@@ -210,7 +212,9 @@ def build_result_context(result):
     portal/result_view.html, and portal/result_print.html — all three
     render `shared/_result_document.html` off of this exact shape."""
     student = result.student
-    class_arm = student.class_arm
+    # Use the class the result was finalized in, so a promoted student's old
+    # report cards keep their original class, subjects and class size.
+    class_arm = result.class_arm or student.class_arm
     term = result.term
     sess = result.session
 
@@ -218,7 +222,12 @@ def build_result_context(result):
     ca_max = config.ca_max_score if config else 40
     exam_max = config.exam_max_score if config else 60
 
-    class_size = Student.query.filter_by(class_arm_id=class_arm.id, is_active=True).count()
+    if result.class_arm_id:
+        class_size = StudentTermResult.query.filter_by(
+            class_arm_id=class_arm.id, term_id=term.id, session_id=sess.id, status="finalized"
+        ).count()
+    else:
+        class_size = Student.query.filter_by(class_arm_id=class_arm.id, is_active=True).count()
 
     required_subjects = get_required_subjects(class_arm)
     # Sort by subject name for stable, human-friendly ordering.

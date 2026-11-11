@@ -214,11 +214,13 @@ class GradingScale(db.Model):
 
     @staticmethod
     def get_grade(score):
-        result = GradingScale.query.filter(
-            GradingScale.min_score <= score,
-            GradingScale.max_score >= score
-        ).first()
-        return result
+        # Match on the lower bound only, highest band first, so decimal
+        # scores like 69.5 never fall into the gap between 69 and 70.
+        return (
+            GradingScale.query.filter(GradingScale.min_score <= score)
+            .order_by(GradingScale.min_score.desc())
+            .first()
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -295,6 +297,11 @@ class StudentTermResult(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     term_id = db.Column(db.Integer, db.ForeignKey("term.id"), nullable=False)
     session_id = db.Column(db.Integer, db.ForeignKey("session.id"), nullable=False)
+
+    # The class the student was in when this result was finalized. Keeps old
+    # report cards correct after the student is promoted to another class.
+    class_arm_id = db.Column(db.Integer, db.ForeignKey("class_arm.id"))
+    class_arm = db.relationship("ClassArm")
 
     cumulative_total = db.Column(db.Float, default=0)
     cumulative_average = db.Column(db.Float, default=0)
