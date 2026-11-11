@@ -22,6 +22,11 @@ depends_on = None
 
 
 def upgrade():
+    # The app may already have added this column at startup; skip if so.
+    insp = sa.inspect(op.get_bind())
+    if 'class_arm_id' in {c['name'] for c in insp.get_columns('student_term_result')}:
+        return
+
     with op.batch_alter_table('student_term_result', schema=None) as batch_op:
         batch_op.add_column(sa.Column('class_arm_id', sa.Integer(), nullable=True))
         batch_op.create_foreign_key(
