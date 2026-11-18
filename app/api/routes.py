@@ -346,32 +346,6 @@ def update_class_level(level_id):
                     convert_arm_automatic_to_manual(arm)
 
     db.session.commit()
-    return jsonify({"success": True, "level": serialize_level(level)}), 201
-
-
-@api_bp.route("/classes/levels/<int:level_id>", methods=["PUT"])
-@api_admin_required
-def update_class_level(level_id):
-    level = ClassLevel.query.get_or_404(level_id)
-    payload = request.get_json(silent=True) or {}
-
-    if "name" in payload:
-        name = (payload.get("name") or "").strip()
-        if not name:
-            return jsonify({"success": False, "message": "Level name is required."}), 400
-        clash = ClassLevel.query.filter(ClassLevel.name == name, ClassLevel.id != level.id).first()
-        if clash:
-            return jsonify({"success": False, "message": "That class level already exists."}), 409
-        level.name = name
-
-    if "section" in payload:
-        section = payload.get("section")
-        if section not in SECTIONS:
-            return jsonify({"success": False, "message": "Section must be primary or secondary."}), 400
-        # Phase 1: only the flag changes. Assignments are never touched here.
-        level.section = section
-
-    db.session.commit()
     return jsonify({"success": True, "level": serialize_level(level)})
 
 
