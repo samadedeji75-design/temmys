@@ -23,11 +23,19 @@ from app.models import (
     TeacherSubjectAssignment,
     Score,
     StudentTermResult,
+    SECTIONS,
+    SECTION_PRIMARY,
+    SECTION_SECONDARY,
 )
 from app.api import api_bp
 from app.api.decorators import api_admin_required, api_teacher_required, api_portal_required
 from app.services.security import encrypt_password, decrypt_password
 from app.services.email import send_teacher_credentials_email
+from app.services.assignments import (
+    teacher_can_write_remarks,
+    describe_arm_assignments,
+    clear_arm_assignments,
+)
 from app.services.results import (
     get_required_subjects,
     get_eligible_students,
@@ -76,11 +84,18 @@ def serialize_arm(arm):
         "levelId": arm.class_level_id,
         "name": arm.name,
         "studentCount": len(arm.students),
+        "classTeacherId": arm.class_teacher_id,
+        "classTeacherName": arm.class_teacher.full_name if arm.class_teacher else None,
     }
 
 
 def serialize_level(level):
-    return {"id": level.id, "name": level.name, "order": level.order}
+    return {
+        "id": level.id,
+        "name": level.name,
+        "order": level.order,
+        "section": level.section or SECTION_SECONDARY,
+    }
 
 
 def serialize_subject(subject):
@@ -259,14 +274,43 @@ def create_class_level():
     name = (payload.get("name") or "").strip()
     if not name:
         return jsonify({"success": False, "message": "Level name is required."}), 400
+    section = payload.get("section", SECTION_SECONDARY)
+    if section not in SECTIONS:
+        return jsonify({"success": False, "message": "Section must be primary or secondary."}), 400
     if ClassLevel.query.filter_by(name=name).first():
         return jsonify({"success": False, "message": "That class level already exists."}), 409
 
     max_order = db.session.query(db.func.max(ClassLevel.order)).scalar() or 0
-    level = ClassLevel(name=name, order=max_order + 1)
+    level = ClassLevel(name=name, order=max_order + 1, section=section)
     db.session.add(level)
     db.session.commit()
     return jsonify({"success": True, "level": serialize_level(level)}), 201
+
+
+@api_bp.route("/classes/levels/<int:level_id>", methods=["PUT"])
+@api_admin_required
+def update_class_level(level_id):
+    level = ClassLevel.query.get_or_404(level_id)
+    payload = request.get_json(silent=True) or {}
+
+    if "name" in payload:
+        name = (payload.get("name") or "").strip()
+        if not name:
+            return jsonify({"success": False, "message": "Level name is required."}), 400
+        clash = ClassLevel.query.filter(ClassLevel.name == name, ClassLevel.id != level.id).first()
+        if clash:
+            return jsonify({"success": False, "message": "That class level already exists."}), 409
+        level.name = name
+
+    if "section" in payload:
+        section = payload.get("section")
+        if section not in SECTIONS:
+            return jsonify({"success": False, "message": "Section must be primary or secondary."}), 400
+        # Phase 1: only the flag changes. Assignments are never touched here.
+        level.section = section
+
+    db.session.commit()
+    return jsonify({"success": True, "level": serialize_level(level)})
 
 
 @api_bp.route("/classes/arms", methods=["POST"])
@@ -294,13 +338,46 @@ def create_class_arm():
 def update_class_arm(arm_id):
     arm = ClassArm.query.get_or_404(arm_id)
     payload = request.get_json(silent=True) or {}
-    level_id = payload.get("levelId", arm.class_level_id)
-    name = (payload.get("name") or arm.name).strip()
 
-    if not ClassLevel.query.get(level_id):
+    try:
+        level_id = int(payload.get("levelId", arm.class_level_id))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "Class level not found."}), 404
+    new_level = ClassLevel.query.get(level_id)
+    if not new_level:
         return jsonify({"success": False, "message": "Class level not found."}), 404
 
-    arm.class_level_id = level_id
+    name = (payload.get("name") or arm.name).strip()
+    if not name:
+        return jsonify({"success": False, "message": "Arm name is required."}), 400
+    clash = ClassArm.query.filter(
+        ClassArm.class_level_id == new_level.id, ClassArm.name == name, ClassArm.id != arm.id
+    ).first()
+    if clash:
+        return jsonify({"success": False, "message": "That arm already exists for this level."}), 409
+
+    # Moving a class to a level of a different section would leave assignments
+    # that no longer follow the rules of the new section, so ask first.
+    old_section = arm.class_level.section or SECTION_SECONDARY
+    new_section = new_level.section or SECTION_SECONDARY
+    crossing = new_level.id != arm.class_level_id and old_section != new_section
+    if crossing:
+        replaces = describe_arm_assignments(arm)
+        if (replaces or arm.class_teacher_id is not None) and payload.get("clearAssignments") is not True:
+            return jsonify({
+                "success": False,
+                "code": "has_assignments",
+                "message": "Moving this class will remove its teacher assignments.",
+                "replaces": replaces,
+                "hasClassTeacher": arm.class_teacher_id is not None,
+            }), 409
+        try:
+            clear_arm_assignments(arm, clear_class_teacher=True)
+        except Exception:
+            db.session.rollback()
+            raise
+
+    arm.class_level_id = new_level.id
     arm.name = name
     db.session.commit()
     return jsonify({"success": True, "arm": serialize_arm(arm)})
@@ -315,9 +392,69 @@ def delete_class_arm(arm_id):
             "success": False,
             "message": f"Can't delete '{arm.display_name}' — it still has students assigned.",
         }), 409
+    # Assignment rows point at the arm, so remove them first.
+    TeacherSubjectAssignment.query.filter_by(class_arm_id=arm.id).delete(synchronize_session=False)
     db.session.delete(arm)
     db.session.commit()
     return jsonify({"success": True})
+
+
+@api_bp.route("/classes/arms/<int:arm_id>/class-teacher", methods=["PUT"])
+@api_admin_required
+def set_arm_class_teacher(arm_id):
+    arm = ClassArm.query.get_or_404(arm_id)
+    payload = request.get_json(silent=True) or {}
+    teacher_id = payload.get("teacherId")
+
+    if teacher_id is None:
+        arm.class_teacher_id = None
+    else:
+        if isinstance(teacher_id, bool):
+            return jsonify({"success": False, "message": "Teacher not found."}), 404
+        try:
+            teacher_id = int(teacher_id)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Teacher not found."}), 404
+        teacher = Teacher.query.get(teacher_id)
+        if not teacher:
+            return jsonify({"success": False, "message": "Teacher not found."}), 404
+        if not teacher.is_active:
+            return jsonify({"success": False, "message": "That teacher is inactive."}), 400
+        arm.class_teacher_id = teacher.id
+
+    # Phase 1: no assignment rows are created here (that arrives in Phase 2).
+    db.session.commit()
+    return jsonify({"success": True, "arm": serialize_arm(arm)})
+
+
+@api_bp.route("/classes/<int:arm_id>/clear-assignments", methods=["POST"])
+@api_admin_required
+def clear_class_assignments(arm_id):
+    arm = ClassArm.query.get_or_404(arm_id)
+    payload = request.get_json(silent=True) or {}
+    replaces = describe_arm_assignments(arm)
+    has_class_teacher = arm.class_teacher_id is not None
+
+    if payload.get("confirm") is not True:
+        if not replaces and not (has_class_teacher and arm.class_level.section == SECTION_PRIMARY):
+            return jsonify({"success": True, "removed": 0, "arm": serialize_arm(arm)})
+        return jsonify({
+            "success": False,
+            "code": "confirm_clear",
+            "message": "This will remove the teacher assignments of this class.",
+            "replaces": replaces,
+            "hasClassTeacher": has_class_teacher,
+        }), 409
+
+    try:
+        removed = clear_arm_assignments(
+            arm, clear_class_teacher=payload.get("clearClassTeacher") is True
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"success": True, "removed": removed, "arm": serialize_arm(arm)})
 
 
 # ---------------------------------------------------------------------------
@@ -1130,7 +1267,29 @@ def teacher_my_assignments():
             "studentsWithScoresEntered": entered,
         })
 
-    return jsonify({"success": True, "assignments": result})
+    remark_classes = _remark_classes_for_teacher(teacher_id, assignments)
+
+    return jsonify({"success": True, "assignments": result, "remarkClasses": remark_classes})
+
+
+def _remark_classes_for_teacher(teacher_id, assignments):
+    """Every class this teacher may write remarks for, one entry per class."""
+    arm_ids = {a.class_arm_id for a in assignments}
+    arm_ids.update(
+        arm.id for arm in ClassArm.query.filter_by(class_teacher_id=teacher_id).all()
+    )
+    entries = []
+    for arm_id in arm_ids:
+        if not teacher_can_write_remarks(teacher_id, arm_id):
+            continue
+        arm = ClassArm.query.get(arm_id)
+        entries.append({
+            "classArmId": arm.id,
+            "className": arm.display_name,
+            "isClassTeacher": arm.class_teacher_id == teacher_id,
+        })
+    entries.sort(key=lambda e: e["className"])
+    return entries
 
 
 @api_bp.route("/teacher/scores", methods=["GET"])
@@ -1319,16 +1478,12 @@ def save_teacher_scores():
 @api_teacher_required
 def teacher_get_class_remarks(class_arm_id):
     """Finalized results for this class arm, for the class-teacher-remark
-    entry screen. Scoped the same way as score entry: a teacher must hold
-    at least one TeacherSubjectAssignment for this class arm (any subject —
-    this system has no separate "form teacher" concept, so any subject
-    teacher assigned to the class may enter the class remark)."""
+    entry screen. Only the class teacher may write remarks. If the class has
+    no class teacher set, any teacher with an assignment in it may (fallback)."""
     teacher_id = session["teacheronline"]
-    assignment = TeacherSubjectAssignment.query.filter_by(
-        teacher_id=teacher_id, class_arm_id=class_arm_id
-    ).first()
-    if not assignment:
+    if not teacher_can_write_remarks(teacher_id, class_arm_id):
         return jsonify({"success": False, "message": "You are not assigned to this class."}), 403
+    arm = ClassArm.query.get(class_arm_id)
 
     active_session, active_term = _get_active_term()
     if not active_session or not active_term:
@@ -1354,7 +1509,7 @@ def teacher_get_class_remarks(class_arm_id):
         for r in results
     ]
 
-    return jsonify({"success": True, "classArmLabel": assignment.class_arm.display_name, "results": payload})
+    return jsonify({"success": True, "classArmLabel": arm.display_name, "results": payload})
 
 
 @api_bp.route("/teacher/results/<int:result_id>/remarks", methods=["POST"])
@@ -1366,10 +1521,7 @@ def teacher_update_remark(result_id):
     teacher_id = session["teacheronline"]
     result = StudentTermResult.query.get_or_404(result_id)
 
-    assignment = TeacherSubjectAssignment.query.filter_by(
-        teacher_id=teacher_id, class_arm_id=result.student.class_arm_id
-    ).first()
-    if not assignment:
+    if not teacher_can_write_remarks(teacher_id, result.student.class_arm_id):
         return jsonify({"success": False, "message": "You are not assigned to this class."}), 403
     if result.status != "finalized":
         return jsonify({"success": False, "message": "This result has not been finalized yet."}), 404

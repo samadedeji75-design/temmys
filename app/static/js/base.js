@@ -135,6 +135,10 @@ $(function () {
       dataType: "json",
       headers: { "X-CSRFToken": $('meta[name="csrf-token"]').attr("content") }
     }).fail(function (xhr) {
+      // Confirmation prompts (409 with a "code") are handled by the caller,
+      // so they must not also show an error toast.
+      const code = xhr.responseJSON && xhr.responseJSON.code;
+      if (xhr.status === 409 && code && (code.indexOf("confirm_") === 0 || code === "has_assignments")) return;
       const message = (xhr.responseJSON && xhr.responseJSON.message) || "Something went wrong. Please try again.";
       window.showToast(message, "danger");
     });

@@ -2,14 +2,23 @@
 <div class="modal-backdrop-custom" id="levelModal">
   <div class="modal-box">
     <div class="modal-box-header">
-      <h3>Add Level</h3>
+      <h3 id="levelModalTitle">Add Level</h3>
       <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
     </div>
     <form id="levelForm">
       <div class="modal-box-body">
-        <div class="form-group mb-0">
+        <input type="hidden" id="levelId">
+        <div class="form-group">
           <label class="form-label" for="levelName">Level Name <span class="required">*</span></label>
           <input type="text" class="form-control" id="levelName" required placeholder="e.g. JSS 1">
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label" for="levelSection">Section</label>
+          <select class="form-select" id="levelSection">
+            <option value="secondary" selected>Secondary</option>
+            <option value="primary">Primary</option>
+          </select>
+          <small class="text-muted">Primary classes have one class teacher for all subjects. Secondary classes use subject teachers.</small>
         </div>
       </div>
       <div class="modal-box-footer">
@@ -17,6 +26,34 @@
         <button type="submit" class="btn btn-primary" id="levelSaveBtn">
           <span class="btn-spinner" style="display:none;"></span>
           <span class="btn-label">Save Level</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Class teacher modal -->
+<div class="modal-backdrop-custom" id="classTeacherModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 id="classTeacherModalTitle">Class teacher</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <form id="classTeacherForm">
+      <div class="modal-box-body">
+        <input type="hidden" id="classTeacherArmId">
+        <div class="form-group mb-0">
+          <label class="form-label" for="classTeacherSelect">Class teacher</label>
+          <select class="form-select" id="classTeacherSelect"></select>
+          <small class="text-muted" id="classTeacherHelp">This teacher writes the class remark on report cards.</small>
+          <div class="text-muted mt-2" id="classTeacherNote" hidden></div>
+        </div>
+      </div>
+      <div class="modal-box-footer">
+        <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="classTeacherSaveBtn">
+          <span class="btn-spinner" style="display:none;"></span>
+          <span class="btn-label">Save</span>
         </button>
       </div>
     </form>

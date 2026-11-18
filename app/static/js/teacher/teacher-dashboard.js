@@ -8,11 +8,13 @@ $(function () {
 
   const emptyState = document.getElementById("dashboardEmptyState");
 
-  function render(assignments) {
+  function render(assignments, hasRemarkClasses) {
     cardGrid.innerHTML = "";
 
     if (assignments.length === 0) {
-      emptyState.style.display = "";
+      // A class teacher with no subject assignments still has work to do
+      // (remarks), so only show the empty state when they have neither.
+      emptyState.style.display = hasRemarkClasses ? "none" : "";
       return;
     }
     emptyState.style.display = "none";
@@ -42,21 +44,13 @@ $(function () {
     });
   }
 
-  function renderClassRemarksLinks(assignments) {
+  function renderClassRemarksLinks(classes) {
     const section = document.getElementById("classRemarksSection");
     const container = document.getElementById("classRemarksLinks");
     if (!section || !container) return;
 
-    // One link per distinct class arm — a teacher assigned to several
-    // subjects in the same class would otherwise see the class repeated.
-    const seen = new Set();
-    const classes = [];
-    assignments.forEach(function (a) {
-      if (seen.has(a.classArmId)) return;
-      seen.add(a.classArmId);
-      classes.push(a);
-    });
-
+    // The server decides which classes this teacher may write remarks for
+    // (one entry per class), so the list is used as it comes.
     if (classes.length === 0) {
       section.style.display = "none";
       return;
@@ -74,7 +68,7 @@ $(function () {
           '<div class="assignment-card-subtitle">Enter remarks for this class</div>' +
         "</div>" +
         '<div class="assignment-card-footer">' +
-          "<span></span>" +
+          (a.isClassTeacher ? '<span class="badge badge-info">Class teacher</span>' : "<span></span>") +
           '<span><i class="bi bi-arrow-right"></i></span>' +
         "</div>";
       container.appendChild(card);
@@ -83,8 +77,9 @@ $(function () {
 
   window.apiRequest("GET", "/api/teacher/my-assignments").done(function (response) {
     if (response && response.success) {
-      render(response.assignments);
-      renderClassRemarksLinks(response.assignments);
+      const remarkClasses = response.remarkClasses || [];
+      render(response.assignments, remarkClasses.length > 0);
+      renderClassRemarksLinks(remarkClasses);
     }
   });
 });

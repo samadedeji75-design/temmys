@@ -1,6 +1,7 @@
 from flask import render_template, session, abort
 
-from app.models import TeacherSubjectAssignment
+from app.models import ClassArm, TeacherSubjectAssignment
+from app.services.assignments import teacher_can_write_remarks
 from app.teacher import teacher_bp
 from app.teacher.decorators import teacher_required
 
@@ -39,20 +40,16 @@ def score_entry(class_arm_id, subject_id):
 @teacher_bp.route("/classes/<int:class_arm_id>/remarks")
 @teacher_required
 def class_remarks(class_arm_id):
-    # Same ownership check as score_entry, but scoped to the class arm only
-    # (any subject assignment in this class qualifies — there's no separate
-    # "form teacher" concept in this system).
-    assignment = TeacherSubjectAssignment.query.filter_by(
-        teacher_id=session["teacheronline"],
-        class_arm_id=class_arm_id,
-    ).first()
-    if not assignment:
+    # Only the class teacher may write remarks. If the class has no class
+    # teacher set, any teacher with an assignment in it may (fallback).
+    if not teacher_can_write_remarks(session["teacheronline"], class_arm_id):
         abort(403)
+    arm = ClassArm.query.get_or_404(class_arm_id)
 
     return render_template(
         "teacher/class_remarks.html",
         role="teacher",
         active_page="score_entry",
         class_arm_id=class_arm_id,
-        class_name=assignment.class_arm.display_name,
+        class_name=arm.display_name,
     )

@@ -4,6 +4,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
+# Allowed values for class_level.section and teacher_subject_assignment.source
+SECTION_PRIMARY = "primary"
+SECTION_SECONDARY = "secondary"
+SECTIONS = (SECTION_PRIMARY, SECTION_SECONDARY)
+
+SOURCE_MANUAL = "manual"
+SOURCE_CLASS_TEACHER = "class_teacher"
+SOURCES = (SOURCE_MANUAL, SOURCE_CLASS_TEACHER)
+
 
 # ---------------------------------------------------------------------------
 # SCHOOL CONFIG
@@ -71,6 +80,9 @@ class ClassLevel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     order = db.Column(db.Integer, default=0)  # for sorting JSS1 -> SS3
+    # "primary" (class teacher teaches everything) or "secondary" (subject teachers).
+    # Unmarked or older levels behave as secondary, which is the original behavior.
+    section = db.Column(db.String(20), nullable=False, default=SECTION_SECONDARY, server_default=SECTION_SECONDARY)
 
     arms = db.relationship("ClassArm", backref="class_level", lazy=True, cascade="all, delete-orphan")
 
@@ -82,7 +94,13 @@ class ClassArm(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)  # "Gold"
     class_level_id = db.Column(db.Integer, db.ForeignKey("class_level.id"), nullable=False)
+    class_teacher_id = db.Column(
+        db.Integer,
+        db.ForeignKey("teacher.id", ondelete="SET NULL", name="fk_class_arm_class_teacher"),
+        nullable=True,
+    )
 
+    class_teacher = db.relationship("Teacher", foreign_keys=[class_teacher_id])
     students = db.relationship("Student", backref="class_arm", lazy=True)
     class_subjects = db.relationship("ClassSubject", backref="class_arm", lazy=True, cascade="all, delete-orphan")
 
@@ -155,6 +173,8 @@ class TeacherSubjectAssignment(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
     class_arm_id = db.Column(db.Integer, db.ForeignKey("class_arm.id"), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
+    # "manual" = chosen by the admin; "class_teacher" = created automatically (Phase 2)
+    source = db.Column(db.String(20), nullable=False, default=SOURCE_MANUAL, server_default=SOURCE_MANUAL)
 
     class_arm = db.relationship("ClassArm")
     subject = db.relationship("Subject")
