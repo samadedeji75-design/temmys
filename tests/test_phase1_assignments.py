@@ -184,7 +184,7 @@ def test_update_level(admin_client, world):
     assert admin_client.put("/api/classes/levels/9999", json={"name": "Z"}).status_code == 404
 
 
-def test_section_change_does_not_touch_assignments_in_phase1(admin_client, world):
+def test_section_change_to_primary_without_class_teacher_leaves_assignments(admin_client, world):
     level = world.level("P1")
     arm = world.arm(level)
     teacher, subject = world.teacher(), world.subject()

@@ -61,7 +61,12 @@ $(function () {
       row.querySelector(".teacher-email-cell").textContent = t.email;
       const $placeholderBadge = $(row).find(".teacher-email-placeholder-badge");
       $placeholderBadge.prop("hidden", !t.emailIsPlaceholder);
-      row.querySelector(".teacher-assignment-count-cell").textContent = t.assignmentCount;
+      row.querySelector(".teacher-assignment-count").textContent = t.assignmentCount;
+      const classTeacherOf = t.classTeacherOf || [];
+      const $classTeacherOf = $(row).find(".teacher-class-teacher-of");
+      if (classTeacherOf.length > 0) {
+        $classTeacherOf.text("Class teacher: " + classTeacherOf.join(", ")).prop("hidden", false);
+      }
 
       const badge = row.querySelector(".teacher-status-badge");
       if (t.isActive) {

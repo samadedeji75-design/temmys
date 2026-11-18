@@ -27,7 +27,18 @@ RESEND_API_URL = "https://api.resend.com/emails"
 
 
 def _teacher_assignment_lines(teacher):
-    """One 'Class — Subject' line per assignment, sorted for readability."""
+    """One line per class for a primary class teacher, one 'Class - Subject'
+    line per manual assignment, and a remarks line for each secondary class
+    the teacher is class teacher of. Sorted for readability."""
+    from app.models import ClassArm, SECTION_PRIMARY, SOURCE_CLASS_TEACHER
+
+    lines = []
+    for arm in ClassArm.query.filter_by(class_teacher_id=teacher.id).all():
+        if arm.class_level.section == SECTION_PRIMARY:
+            lines.append(f"{arm.display_name} (class teacher, all subjects)")
+        else:
+            lines.append(f"{arm.display_name} (class teacher, remarks)")
+
     assignments = (
         TeacherSubjectAssignment.query
         .filter_by(teacher_id=teacher.id)
@@ -35,10 +46,11 @@ def _teacher_assignment_lines(teacher):
         .join(TeacherSubjectAssignment.subject)
         .all()
     )
-    lines = sorted(
-        f"{a.class_arm.display_name} — {a.subject.name}" for a in assignments
-    )
-    return lines
+    for a in assignments:
+        if a.source == SOURCE_CLASS_TEACHER and a.class_arm.class_teacher_id == teacher.id:
+            continue  # already covered by the "all subjects" line
+        lines.append(f"{a.class_arm.display_name} - {a.subject.name}")
+    return sorted(lines)
 
 
 def send_teacher_credentials_email(teacher, raw_password):

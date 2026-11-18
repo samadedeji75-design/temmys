@@ -142,7 +142,10 @@ $(function () {
     const $btn = $("#levelSaveBtn");
     $btn.prop("disabled", true).find(".btn-spinner").show();
 
-    const body = { name: name, section: section };
+    saveLevel(id, { name: name, section: section }, $btn);
+  });
+
+  function saveLevel(id, body, $btn) {
     const request = id
       ? window.apiRequest("PUT", "/api/classes/levels/" + id, body)
       : window.apiRequest("POST", "/api/classes/levels", body);
@@ -155,10 +158,26 @@ $(function () {
           window.showToast(id ? "Level updated." : "Level added.", "success");
         }
       })
+      .fail(function (xhr) {
+        const data = xhr.responseJSON || {};
+        if (xhr.status === 409 && data.code === "confirm_replace") {
+          const who = describeReplaces(data.replaces);
+          window.confirmAction({
+            title: "Make this level primary?",
+            body: "Each class with a class teacher will give that teacher every subject. This replaces: " +
+              who + ". Scores already entered are kept.",
+            confirmLabel: "Make primary",
+            danger: true,
+            onConfirm: function () {
+              saveLevel(id, Object.assign({}, body, { confirmReplace: true }), $btn);
+            }
+          });
+        }
+      })
       .always(function () {
         $btn.prop("disabled", false).find(".btn-spinner").hide();
       });
-  });
+  }
 
   /* ---------------- Arms ---------------- */
 
@@ -331,7 +350,12 @@ $(function () {
 
     $("#classTeacherArmId").val(arm.id);
     $("#classTeacherModalTitle").text("Class teacher: " + armLabel(arm));
-    $("#classTeacherHelp").text("This teacher writes the class remark on report cards.");
+    const level = levelById(arm.levelId);
+    $("#classTeacherHelp").text(
+      level && level.section === "primary"
+        ? "This teacher will also teach every subject in this class."
+        : "This teacher writes the class remark on report cards."
+    );
     updateClassTeacherNote();
     window.openModal($("#classTeacherModal"));
   });
@@ -347,7 +371,11 @@ $(function () {
     const $btn = $("#classTeacherSaveBtn");
     $btn.prop("disabled", true).find(".btn-spinner").show();
 
-    window.apiRequest("PUT", "/api/classes/arms/" + armId + "/class-teacher", { teacherId: teacherId })
+    saveClassTeacher(armId, { teacherId: teacherId }, $btn);
+  });
+
+  function saveClassTeacher(armId, body, $btn) {
+    window.apiRequest("PUT", "/api/classes/arms/" + armId + "/class-teacher", body)
       .done(function (response) {
         if (response && response.success) {
           loadClasses();
@@ -355,10 +383,25 @@ $(function () {
           window.showToast("Class teacher saved.", "success");
         }
       })
+      .fail(function (xhr) {
+        const data = xhr.responseJSON || {};
+        if (xhr.status === 409 && data.code === "confirm_replace") {
+          window.confirmAction({
+            title: "Replace existing assignments?",
+            body: "Setting this class teacher gives them every subject in this class and removes: " +
+              describeReplaces(data.replaces) + ". Scores already entered are kept.",
+            confirmLabel: "Replace",
+            danger: true,
+            onConfirm: function () {
+              saveClassTeacher(armId, Object.assign({}, body, { confirmReplace: true }), $btn);
+            }
+          });
+        }
+      })
       .always(function () {
         $btn.prop("disabled", false).find(".btn-spinner").hide();
       });
-  });
+  }
 
   loadClasses();
   loadTeachers();

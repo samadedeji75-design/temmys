@@ -26,6 +26,7 @@ from app.models import (
     SECTIONS,
     SECTION_PRIMARY,
     SECTION_SECONDARY,
+    SOURCE_CLASS_TEACHER,
 )
 from app.api import api_bp
 from app.api.decorators import api_admin_required, api_teacher_required, api_portal_required
@@ -35,6 +36,9 @@ from app.services.assignments import (
     teacher_can_write_remarks,
     describe_arm_assignments,
     clear_arm_assignments,
+    sync_primary_arm,
+    describe_primary_replacement,
+    convert_arm_automatic_to_manual,
 )
 from app.services.results import (
     get_required_subjects,
@@ -126,6 +130,9 @@ def serialize_teacher(teacher):
         "emailIsPlaceholder": teacher.email.endswith("@placeholder.local"),
         "isActive": teacher.is_active,
         "assignmentCount": len(teacher.assignments),
+        "classTeacherOf": sorted(
+            arm.display_name for arm in ClassArm.query.filter_by(class_teacher_id=teacher.id).all()
+        ),
     }
 
 
@@ -136,6 +143,7 @@ def serialize_assignment(assignment):
         "className": assignment.class_arm.display_name if assignment.class_arm else None,
         "subjectId": assignment.subject_id,
         "subjectName": assignment.subject.name if assignment.subject else None,
+        "source": assignment.source or "manual",
     }
 
 
@@ -305,6 +313,60 @@ def update_class_level(level_id):
     if "section" in payload:
         section = payload.get("section")
         if section not in SECTIONS:
+            db.session.rollback()
+            return jsonify({"success": False, "message": "Section must be primary or secondary."}), 400
+
+        old_section = level.section or SECTION_SECONDARY
+        if section != old_section:
+            if section == SECTION_PRIMARY:
+                # Arms that already have a class teacher are synced now. Ask
+                # first if that would replace existing subject assignments.
+                replaces = []
+                for arm in level.arms:
+                    if arm.class_teacher_id is None:
+                        continue
+                    info = describe_primary_replacement(arm, arm.class_teacher_id)
+                    replaces.extend(info["replaces"])
+                if replaces and payload.get("confirmReplace") is not True:
+                    db.session.rollback()
+                    return jsonify({
+                        "success": False,
+                        "code": "confirm_replace",
+                        "message": "Making this level primary will replace existing subject assignments in its classes.",
+                        "replaces": replaces,
+                    }), 409
+                level.section = section
+                for arm in level.arms:
+                    if arm.class_teacher_id is not None:
+                        sync_primary_arm(arm)
+            else:
+                # Leaving primary: automatic rows become manual, nobody loses access.
+                level.section = section
+                for arm in level.arms:
+                    convert_arm_automatic_to_manual(arm)
+
+    db.session.commit()
+    return jsonify({"success": True, "level": serialize_level(level)}), 201
+
+
+@api_bp.route("/classes/levels/<int:level_id>", methods=["PUT"])
+@api_admin_required
+def update_class_level(level_id):
+    level = ClassLevel.query.get_or_404(level_id)
+    payload = request.get_json(silent=True) or {}
+
+    if "name" in payload:
+        name = (payload.get("name") or "").strip()
+        if not name:
+            return jsonify({"success": False, "message": "Level name is required."}), 400
+        clash = ClassLevel.query.filter(ClassLevel.name == name, ClassLevel.id != level.id).first()
+        if clash:
+            return jsonify({"success": False, "message": "That class level already exists."}), 409
+        level.name = name
+
+    if "section" in payload:
+        section = payload.get("section")
+        if section not in SECTIONS:
             return jsonify({"success": False, "message": "Section must be primary or secondary."}), 400
         # Phase 1: only the flag changes. Assignments are never touched here.
         level.section = section
@@ -420,10 +482,24 @@ def set_arm_class_teacher(arm_id):
             return jsonify({"success": False, "message": "Teacher not found."}), 404
         if not teacher.is_active:
             return jsonify({"success": False, "message": "That teacher is inactive."}), 400
+        if arm.class_level.section == SECTION_PRIMARY:
+            info = describe_primary_replacement(arm, teacher.id)
+            if info["replaces"] and payload.get("confirmReplace") is not True:
+                return jsonify({
+                    "success": False,
+                    "code": "confirm_replace",
+                    "message": "Setting this class teacher will replace existing subject assignments in this class.",
+                    "replaces": info["replaces"],
+                }), 409
         arm.class_teacher_id = teacher.id
 
-    # Phase 1: no assignment rows are created here (that arrives in Phase 2).
-    db.session.commit()
+    try:
+        # Primary classes: the class teacher gets every subject of the class.
+        sync_primary_arm(arm)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"success": True, "arm": serialize_arm(arm)})
 
 
@@ -486,7 +562,14 @@ def set_class_subjects(arm_id):
         if Subject.query.get(sid):
             db.session.add(ClassSubject(class_arm_id=arm.id, subject_id=sid))
 
-    db.session.commit()
+    try:
+        # Keep a primary class teacher's subjects in step with the class.
+        db.session.flush()
+        sync_primary_arm(arm)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return jsonify({"success": True, "armId": arm.id, "subjectIds": list(selected_ids)})
 
 
@@ -1156,6 +1239,11 @@ def create_teacher_assignment(teacher_id):
     class_arm = ClassArm.query.get(class_arm_id)
     if not class_arm:
         return jsonify({"success": False, "message": "Class not found."}), 404
+    if class_arm.class_level.section == SECTION_PRIMARY:
+        return jsonify({
+            "success": False,
+            "message": "This is a primary class. Set a class teacher instead.",
+        }), 409
     subject = Subject.query.get(subject_id)
     if not subject:
         return jsonify({"success": False, "message": "Subject not found."}), 404
@@ -1185,6 +1273,11 @@ def create_teacher_assignment(teacher_id):
 @api_admin_required
 def delete_teacher_assignment(assignment_id):
     assignment = TeacherSubjectAssignment.query.get_or_404(assignment_id)
+    if assignment.source == SOURCE_CLASS_TEACHER:
+        return jsonify({
+            "success": False,
+            "message": "This assignment comes from the class teacher. Change the class teacher instead.",
+        }), 409
     db.session.delete(assignment)
     db.session.commit()
     return jsonify({"success": True})

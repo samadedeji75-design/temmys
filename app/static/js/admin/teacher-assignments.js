@@ -29,9 +29,14 @@ $(function () {
 
   function populateClassAndSubjectPickers() {
     $classArmPicker.empty();
-    classArms.forEach(function (arm) {
+    // Primary classes get their teacher from the class teacher setting, not here.
+    const pickable = classArms.filter(function (arm) { return !arm.isPrimary; });
+    pickable.forEach(function (arm) {
       $classArmPicker.append('<option value="' + arm.id + '">' + arm.label + "</option>");
     });
+    const allPrimary = classArms.length > 0 && pickable.length === 0;
+    $("#primaryOnlyHint").prop("hidden", !allPrimary);
+    $addBtn.prop("disabled", pickable.length === 0);
     $subjectPicker.empty();
     subjects.forEach(function (s) {
       $subjectPicker.append('<option value="' + s.id + '">' + s.name + "</option>");
@@ -50,12 +55,15 @@ $(function () {
     $empty.hide();
 
     assignments.forEach(function (a) {
+      const automatic = a.source === "class_teacher";
       const $row = $(
         '<tr data-id="' + a.id + '">' +
           "<td>" + $("<div>").text(a.className || "").html() + "</td>" +
-          "<td>" + $("<div>").text(a.subjectName || "").html() + "</td>" +
+          "<td>" + $("<div>").text(a.subjectName || "").html() +
+            (automatic ? ' <span class="badge badge-info">Class teacher (automatic)</span>' : "") +
+          "</td>" +
           '<td class="row-actions">' +
-            '<button type="button" class="btn btn-outline-danger btn-sm js-remove-assignment"><i class="bi bi-trash"></i></button>' +
+            (automatic ? "" : '<button type="button" class="btn btn-outline-danger btn-sm js-remove-assignment"><i class="bi bi-trash"></i></button>') +
           "</td>" +
         "</tr>"
       );
@@ -87,7 +95,11 @@ $(function () {
       teachers = teachersData.teachers;
       classArms = classesData.arms.map(function (arm) {
         const level = classesData.levels.find(function (l) { return l.id === arm.levelId; });
-        return { id: arm.id, label: (level ? level.name : "") + " " + arm.name };
+        return {
+          id: arm.id,
+          label: (level ? level.name : "") + " " + arm.name,
+          isPrimary: !!(level && level.section === "primary"),
+        };
       });
       subjects = subjectsData.subjects;
 
