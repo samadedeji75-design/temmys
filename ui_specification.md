@@ -3,7 +3,7 @@
 Covers every screen across the three portals (Admin, Teacher, Parent/Student), the exact file names, and what each page must display. Follows the SceneX pattern: dark-themed base, Bootstrap 5 grid, jQuery for interactivity, fixed sidebar for logged-in views, no page-specific CSS unless a page truly needs it (prefer shared component classes).
 
 ---
-ef
+efwe
 ## Folder Structure
 
 ```
