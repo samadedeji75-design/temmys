@@ -175,7 +175,31 @@ $(function () {
     });
   });
 
+  // Point the admin at duplicate teachers or leftover assignments, if any.
+  function loadIssuesBanner() {
+    window.apiRequest("GET", "/api/assignments/conflicts").done(function (response) {
+      if (!response || !response.success) return;
+      const parts = [];
+      if (response.orphans.length) {
+        parts.push(response.orphans.length + " assignment(s) point to subjects a class no longer offers");
+      }
+      if (response.conflicts.length) {
+        parts.push(response.conflicts.length + " class-subject(s) have more than one teacher");
+      }
+      const $banner = $("#assignmentIssuesBanner");
+      if (parts.length === 0) {
+        $banner.prop("hidden", true);
+        return;
+      }
+      $banner.empty()
+        .append($("<span>").text(parts.join(" and ") + ". "))
+        .append($("<a>").attr("href", "/admin/class-assignments").text("Review on Class Assignments"))
+        .prop("hidden", false);
+    });
+  }
+
   $noTeacherState.show();
   $builder.prop("hidden", true);
   loadInitialData();
+  loadIssuesBanner();
 });

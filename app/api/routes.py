@@ -33,6 +33,12 @@ from app.api.decorators import api_admin_required, api_teacher_required, api_por
 from app.services.security import encrypt_password, decrypt_password
 from app.services.email import send_teacher_credentials_email
 from app.services.assignments import (
+    class_assignment_entries,
+    class_assignment_entry,
+    set_subject_teacher,
+    find_conflicts,
+    find_orphan_rows,
+    removal_details,
     teacher_can_write_remarks,
     describe_arm_assignments,
     clear_arm_assignments,
@@ -524,19 +530,47 @@ def get_class_subjects(arm_id):
 def set_class_subjects(arm_id):
     arm = ClassArm.query.get_or_404(arm_id)
     payload = request.get_json(silent=True) or {}
-    selected_ids = set(payload.get("subjectIds") or [])
+    raw_ids = payload.get("subjectIds")
+
+    if not isinstance(raw_ids, list) or any(
+        isinstance(i, bool) or not isinstance(i, int) for i in raw_ids
+    ):
+        return jsonify({"success": False, "message": "subjectIds must be a list of numbers."}), 400
+
+    requested = set(raw_ids)
+    existing = {s.id for s in Subject.query.filter(Subject.id.in_(requested)).all()} if requested else set()
+    selected_ids = requested & existing
 
     current_ids = {cs.subject_id for cs in arm.class_subjects}
+    removed_ids = current_ids - selected_ids
 
-    for cs in list(arm.class_subjects):
-        if cs.subject_id not in selected_ids:
-            db.session.delete(cs)
-
-    for sid in selected_ids - current_ids:
-        if Subject.query.get(sid):
-            db.session.add(ClassSubject(class_arm_id=arm.id, subject_id=sid))
+    # Removing a subject that still has teachers or recorded scores needs an
+    # explicit confirmation. Scores are always kept.
+    if removed_ids and payload.get("confirmRemoval") is not True:
+        details = removal_details(arm, removed_ids)
+        if details:
+            return jsonify({
+                "success": False,
+                "code": "confirm_removal",
+                "message": "Some removed subjects still have teachers or recorded scores.",
+                "details": details,
+            }), 409
 
     try:
+        for cs in list(arm.class_subjects):
+            if cs.subject_id in removed_ids:
+                db.session.delete(cs)
+
+        if removed_ids:
+            # Nobody should stay assigned to a subject the class no longer offers.
+            TeacherSubjectAssignment.query.filter(
+                TeacherSubjectAssignment.class_arm_id == arm.id,
+                TeacherSubjectAssignment.subject_id.in_(removed_ids),
+            ).delete(synchronize_session=False)
+
+        for sid in selected_ids - current_ids:
+            db.session.add(ClassSubject(class_arm_id=arm.id, subject_id=sid))
+
         # Keep a primary class teacher's subjects in step with the class.
         db.session.flush()
         sync_primary_arm(arm)
@@ -544,7 +578,92 @@ def set_class_subjects(arm_id):
     except Exception:
         db.session.rollback()
         raise
-    return jsonify({"success": True, "armId": arm.id, "subjectIds": list(selected_ids)})
+    return jsonify({"success": True, "armId": arm.id, "subjectIds": sorted(selected_ids)})
+
+
+@api_bp.route("/classes/<int:arm_id>/assignments", methods=["GET"])
+@api_admin_required
+def get_class_assignments(arm_id):
+    arm = ClassArm.query.get_or_404(arm_id)
+    return jsonify({
+        "success": True,
+        "arm": {
+            "id": arm.id,
+            "label": arm.display_name,
+            "section": arm.class_level.section,
+            "classTeacherId": arm.class_teacher_id,
+            "classTeacherName": arm.class_teacher.full_name if arm.class_teacher else None,
+        },
+        "subjects": class_assignment_entries(arm),
+    })
+
+
+@api_bp.route("/classes/<int:arm_id>/subjects/<int:subject_id>/teacher", methods=["PUT"])
+@api_admin_required
+def set_class_subject_teacher(arm_id, subject_id):
+    arm = ClassArm.query.get_or_404(arm_id)
+    if arm.class_level.section == SECTION_PRIMARY:
+        return jsonify({
+            "success": False,
+            "message": "This is a primary class. Set a class teacher instead.",
+        }), 409
+
+    subject = Subject.query.get_or_404(subject_id)
+    if not ClassSubject.query.filter_by(class_arm_id=arm.id, subject_id=subject.id).first():
+        return jsonify({"success": False, "message": "That subject isn't offered by this class."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    teacher_id = payload.get("teacherId")
+    if teacher_id is not None:
+        if isinstance(teacher_id, bool) or not isinstance(teacher_id, int):
+            return jsonify({"success": False, "message": "Invalid teacher."}), 400
+        teacher = Teacher.query.get(teacher_id)
+        if not teacher:
+            return jsonify({"success": False, "message": "Teacher not found."}), 404
+        if not teacher.is_active:
+            return jsonify({"success": False, "message": "That teacher is inactive."}), 400
+
+    try:
+        set_subject_teacher(arm, subject.id, teacher_id)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"success": True, "subject": class_assignment_entry(arm, subject)})
+
+
+@api_bp.route("/assignments/conflicts", methods=["GET"])
+@api_admin_required
+def list_assignment_issues():
+    """Things the admin should tidy up: class-subjects with more than one
+    teacher, and assignments pointing at subjects a class no longer offers."""
+    orphans = [
+        {
+            "assignmentId": row.id,
+            "classArmId": row.class_arm_id,
+            "className": row.class_arm.display_name,
+            "subjectId": row.subject_id,
+            "subjectName": row.subject.name,
+            "teacherId": row.teacher_id,
+            "teacherName": row.teacher.full_name,
+        }
+        for row in find_orphan_rows()
+    ]
+    return jsonify({"success": True, "conflicts": find_conflicts(), "orphans": orphans})
+
+
+@api_bp.route("/assignments/cleanup-orphans", methods=["POST"])
+@api_admin_required
+def cleanup_orphan_assignments():
+    rows = find_orphan_rows()
+    try:
+        for row in rows:
+            db.session.delete(row)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return jsonify({"success": True, "removed": len(rows)})
 
 
 # ---------------------------------------------------------------------------
@@ -1234,6 +1353,25 @@ def create_teacher_assignment(teacher_id):
     ).first()
     if duplicate:
         return jsonify({"success": False, "message": "This assignment already exists."}), 409
+
+    other = (
+        TeacherSubjectAssignment.query
+        .filter(
+            TeacherSubjectAssignment.class_arm_id == class_arm.id,
+            TeacherSubjectAssignment.subject_id == subject.id,
+            TeacherSubjectAssignment.teacher_id != teacher.id,
+        )
+        .order_by(TeacherSubjectAssignment.id)
+        .first()
+    )
+    if other:
+        return jsonify({
+            "success": False,
+            "message": (
+                f"{class_arm.display_name} {subject.name} is already assigned to "
+                f"{other.teacher.full_name}. Use Class Assignments to replace them."
+            ),
+        }), 409
 
     assignment = TeacherSubjectAssignment(
         teacher_id=teacher.id, class_arm_id=class_arm.id, subject_id=subject.id

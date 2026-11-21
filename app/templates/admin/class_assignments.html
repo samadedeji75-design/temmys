@@ -1,0 +1,82 @@
+{% extends "shared/base.html" %}
+{% set role = 'admin' %}
+{% set active_page = 'class_assignments' %}
+{% set page_title = 'Class Assignments' %}
+{% block title %}Class Assignments - School Result Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-between align-center mb-4">
+  <div>
+    <h1 class="page-title mb-0">Class Assignments</h1>
+    <p class="text-muted mb-0">Choose a class, then set who teaches each subject.</p>
+  </div>
+</div>
+
+<div id="issuesArea"></div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="form-label" for="classPicker">Class</label>
+      <select class="form-select" id="classPicker" style="max-width: 360px;"></select>
+    </div>
+  </div>
+</div>
+
+<div id="classCard" hidden>
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="d-flex align-center gap-2">
+        <h2 id="classTitle" class="mb-0"></h2>
+        <span class="badge" id="classSectionBadge"></span>
+      </div>
+      <button type="button" class="btn btn-outline-danger btn-sm" id="clearClassBtn">
+        <i class="bi bi-eraser"></i> Clear assignments
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="form-group mb-0">
+        <label class="form-label" for="classTeacherSelect">Class teacher</label>
+        <select class="form-select" id="classTeacherSelect" style="max-width: 360px;"></select>
+        <div class="form-hint" id="classTeacherHelp"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="mb-0">Subjects</h3>
+      <span class="text-muted" id="assignSummary"></span>
+    </div>
+    <div class="card-body">
+      <p class="text-muted" id="primaryNotice" hidden></p>
+      <div class="table-wrapper" id="subjectsWrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Teacher</th>
+            </tr>
+          </thead>
+          <tbody id="subjectsBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="noSubjectsState" hidden>
+        <div class="empty-state-icon"><i class="bi bi-journal-x"></i></div>
+        <h3>This class has no subjects yet</h3>
+        <p class="text-muted mb-0">Add subjects on the <a href="/admin/class-subjects">Class Subjects</a> page first.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="empty-state" id="noClassState">
+  <div class="empty-state-icon"><i class="bi bi-diagram-3"></i></div>
+  <h3>Choose a class above</h3>
+  <p class="text-muted mb-0">You will see its subjects and who teaches each one.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin/class-assignments.js"></script>
+{% endblock %}

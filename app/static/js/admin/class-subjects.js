@@ -91,18 +91,45 @@ $(function () {
     const selected = $checklist.find("input[type=checkbox]:checked")
       .map(function () { return Number($(this).val()); }).get();
 
+    saveSubjects(armId, selected, false);
+  });
+
+  function saveSubjects(armId, selected, confirmRemoval) {
     $saveBtn.prop("disabled", true).find(".btn-spinner").show();
 
-    window.apiRequest("PUT", "/api/classes/" + armId + "/subjects", { subjectIds: selected })
+    const body = { subjectIds: selected };
+    if (confirmRemoval) body.confirmRemoval = true;
+
+    window.apiRequest("PUT", "/api/classes/" + armId + "/subjects", body)
       .done(function (response) {
         if (response && response.success) {
           window.showToast("Subjects saved for this class arm.", "success");
         }
       })
+      .fail(function (xhr) {
+        const data = xhr.responseJSON || {};
+        if (xhr.status !== 409 || data.code !== "confirm_removal") return;
+
+        const lines = (data.details || []).map(function (d) {
+          const bits = [];
+          if (d.teachers && d.teachers.length) bits.push("teachers: " + d.teachers.join(", "));
+          if (d.scoreCount) bits.push(d.scoreCount + " recorded score" + (d.scoreCount === 1 ? "" : "s"));
+          return d.subjectName + " (" + bits.join("; ") + ")";
+        });
+        window.confirmAction({
+          title: "Remove these subjects?",
+          body: "These subjects still have teachers or scores: " + lines.join(" | ") +
+            ". Their teacher assignments will be removed. Scores are kept, but the subject " +
+            "will no longer be part of this class's results.",
+          confirmLabel: "Remove subjects",
+          danger: true,
+          onConfirm: function () { saveSubjects(armId, selected, true); }
+        });
+      })
       .always(function () {
         $saveBtn.prop("disabled", false).find(".btn-spinner").hide();
       });
-  });
+  }
 
   $noArmState.show();
   $checklistCard.prop("hidden", true);

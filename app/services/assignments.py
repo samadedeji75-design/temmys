@@ -166,3 +166,143 @@ def convert_arm_automatic_to_manual(arm):
         row.source = SOURCE_MANUAL
         converted += 1
     return converted
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: class-by-class assignment screen, single-teacher rule, removal checks
+# ---------------------------------------------------------------------------
+
+def _holders_by_subject(arm):
+    """Assignment rows of an arm grouped by subject id, oldest row first."""
+    grouped = {}
+    rows = (
+        TeacherSubjectAssignment.query.filter_by(class_arm_id=arm.id)
+        .order_by(TeacherSubjectAssignment.id)
+        .all()
+    )
+    for row in rows:
+        grouped.setdefault(row.subject_id, []).append(row)
+    return grouped
+
+
+def _subject_entry(subject, holders):
+    """One line of the class assignment list. If legacy data gives a subject
+    more than one teacher, the oldest assignment is shown and the others are
+    listed in duplicateTeachers so the UI can flag it."""
+    first = holders[0] if holders else None
+    return {
+        "subjectId": subject.id,
+        "subjectName": subject.name,
+        "teacherId": first.teacher_id if first else None,
+        "teacherName": first.teacher.full_name if first else None,
+        "teacherActive": first.teacher.is_active if first else None,
+        "assignmentId": first.id if first else None,
+        "source": first.source if first else None,
+        "duplicateTeachers": [h.teacher.full_name for h in holders[1:]],
+    }
+
+
+def class_assignment_entries(arm):
+    """One entry per subject the class offers, sorted by subject name."""
+    from app.models import Subject
+
+    offered_ids = [cs.subject_id for cs in ClassSubject.query.filter_by(class_arm_id=arm.id).all()]
+    subjects = (
+        Subject.query.filter(Subject.id.in_(offered_ids)).order_by(Subject.name).all()
+        if offered_ids
+        else []
+    )
+    holders = _holders_by_subject(arm)
+    return [_subject_entry(subject, holders.get(subject.id, [])) for subject in subjects]
+
+
+def class_assignment_entry(arm, subject):
+    return _subject_entry(subject, _holders_by_subject(arm).get(subject.id, []))
+
+
+def set_subject_teacher(arm, subject_id, teacher_id):
+    """Make teacher_id the only teacher of (arm, subject), or clear the
+    subject when teacher_id is None. Does not commit."""
+    rows = TeacherSubjectAssignment.query.filter_by(class_arm_id=arm.id, subject_id=subject_id).all()
+
+    if teacher_id is None:
+        for row in rows:
+            db.session.delete(row)
+        return
+
+    mine = None
+    for row in rows:
+        if row.teacher_id == teacher_id and mine is None:
+            mine = row
+        else:
+            db.session.delete(row)
+
+    if mine is None:
+        db.session.flush()
+        db.session.add(TeacherSubjectAssignment(
+            teacher_id=teacher_id, class_arm_id=arm.id, subject_id=subject_id, source=SOURCE_MANUAL
+        ))
+    else:
+        mine.source = SOURCE_MANUAL
+
+
+def find_conflicts():
+    """Every (class, subject) that more than one teacher holds."""
+    grouped = {}
+    for row in TeacherSubjectAssignment.query.order_by(TeacherSubjectAssignment.id).all():
+        grouped.setdefault((row.class_arm_id, row.subject_id), []).append(row)
+
+    conflicts = []
+    for (arm_id, subject_id), rows in grouped.items():
+        if len(rows) < 2:
+            continue
+        first = rows[0]
+        conflicts.append({
+            "classArmId": arm_id,
+            "className": first.class_arm.display_name,
+            "section": first.class_arm.class_level.section,
+            "subjectId": subject_id,
+            "subjectName": first.subject.name,
+            "teachers": [{"id": r.teacher_id, "name": r.teacher.full_name} for r in rows],
+        })
+    return sorted(conflicts, key=lambda c: (c["className"], c["subjectName"]))
+
+
+def find_orphan_rows():
+    """Assignment rows for a subject the class does not offer (left behind by
+    older versions when a subject was removed from a class)."""
+    offered = {(cs.class_arm_id, cs.subject_id) for cs in ClassSubject.query.all()}
+    return [
+        row
+        for row in TeacherSubjectAssignment.query.order_by(TeacherSubjectAssignment.id).all()
+        if (row.class_arm_id, row.subject_id) not in offered
+    ]
+
+
+def removal_details(arm, subject_ids):
+    """For subjects about to be removed from a class: the teachers who hold
+    them and how many scores already exist (any term, students currently in
+    the class). Only subjects with teachers or scores are returned."""
+    from app.models import Subject, Score, Student
+
+    if not subject_ids:
+        return []
+
+    holders = _holders_by_subject(arm)
+    student_ids = [s.id for s in Student.query.filter_by(class_arm_id=arm.id).all()]
+    details = []
+    for subject in Subject.query.filter(Subject.id.in_(list(subject_ids))).order_by(Subject.name).all():
+        teachers = [h.teacher.full_name for h in holders.get(subject.id, [])]
+        score_count = (
+            Score.query.filter(Score.subject_id == subject.id, Score.student_id.in_(student_ids)).count()
+            if student_ids
+            else 0
+        )
+        if teachers or score_count:
+            details.append({
+                "subjectId": subject.id,
+                "subjectName": subject.name,
+                "teachers": teachers,
+                "scoreCount": score_count,
+            })
+    return details

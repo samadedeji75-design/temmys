@@ -47,6 +47,8 @@
         <i class="bi bi-person-workspace"></i> Teachers</a></li>
       <li><a class="sidebar-nav-link {% if active_page == 'assignments' %}active{% endif %}" href="{{ url_for('admin.teacher_assignments') }}">
         <i class="bi bi-clipboard-check"></i> Assignments</a></li>
+      <li><a class="sidebar-nav-link {% if active_page == 'class_assignments' %}active{% endif %}" href="{{ url_for('admin.class_assignments') }}">
+        <i class="bi bi-diagram-3"></i> Class Assignments</a></li>
 
       <li class="sidebar-nav-section">Results</li>
       <li><a class="sidebar-nav-link {% if active_page == 'grading_scale' %}active{% endif %}" href="{{ url_for('admin.grading_scale') }}">

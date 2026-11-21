@@ -196,7 +196,11 @@ def test_adding_and_removing_subject_updates_primary_class_teacher(admin_client,
     assert TeacherSubjectAssignment.query.filter_by(subject_id=new_subject.id).count() == 1
     assert_primary_invariant(ClassArm.query.get(arm.id))
 
-    assert admin_client.put(f"/api/classes/{arm.id}/subjects", json={"subjectIds": [subs[0].id]}).status_code == 200
+    # Phase 3: removing subjects the class teacher holds needs confirmation first.
+    removal = {"subjectIds": [subs[0].id]}
+    assert admin_client.put(f"/api/classes/{arm.id}/subjects", json=removal).status_code == 409
+    removal["confirmRemoval"] = True
+    assert admin_client.put(f"/api/classes/{arm.id}/subjects", json=removal).status_code == 200
     db.session.expire_all()
     assert TeacherSubjectAssignment.query.count() == 1
     assert_primary_invariant(ClassArm.query.get(arm.id))

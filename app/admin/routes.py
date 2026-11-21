@@ -78,6 +78,12 @@ def teachers_list():
     return render_template("admin/teachers_list.html", role="admin", active_page="teachers")
 
 
+@admin_bp.route("/class-assignments")
+@admin_required
+def class_assignments():
+    return render_template("admin/class_assignments.html", role="admin", active_page="class_assignments")
+
+
 @admin_bp.route("/assignments")
 @admin_required
 def teacher_assignments():

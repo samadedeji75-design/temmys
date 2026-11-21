@@ -18,4 +18,6 @@ def test_app_factory_creates_app(client):
 
 def test_homepage_loads(client):
     response = client.get("/")
-    assert response.status_code == 200
+    # The home page sends visitors to the portal login.
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
