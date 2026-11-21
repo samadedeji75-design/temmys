@@ -90,6 +90,8 @@
           <button type="button" class="js-manage-password"><i class="bi bi-eye"></i> View / Edit Password</button>
           <button type="button" class="js-reset-password"><i class="bi bi-key"></i> Reset Password</button>
           <button type="button" class="js-send-credentials-email"><i class="bi bi-envelope"></i> Send Credentials Email</button>
+          <button type="button" class="js-transfer-teacher"><i class="bi bi-arrow-left-right"></i> Transfer assignments</button>
+          <button type="button" class="text-danger js-clear-teacher"><i class="bi bi-eraser"></i> Clear assignments</button>
           <div class="divider"></div>
           <button type="button" class="text-danger js-deactivate-teacher"><i class="bi bi-slash-circle"></i> Deactivate</button>
         </div>
@@ -99,6 +101,31 @@
 </template>
 
 {% include "admin/teacher_form.html" %}
+
+<!-- Transfer assignments modal -->
+<div class="modal-backdrop-custom" id="transferModal">
+  <div class="modal-box">
+    <div class="modal-box-header">
+      <h3 id="transferModalTitle">Transfer assignments</h3>
+      <button type="button" class="modal-box-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-box-body">
+      <div class="form-group">
+        <label class="form-label" for="transferTargetSelect">Move everything to</label>
+        <select class="form-select" id="transferTargetSelect"></select>
+      </div>
+      <p class="mb-0" id="transferSummary"></p>
+      <div class="form-hint">Scores already entered are kept. The new teacher can edit them.</div>
+    </div>
+    <div class="modal-box-footer">
+      <button type="button" class="btn btn-secondary" data-modal-dismiss>Cancel</button>
+      <button type="button" class="btn btn-danger" id="transferConfirmBtn">
+        <span class="btn-spinner" style="display:none;"></span>
+        <span class="btn-label">Transfer</span>
+      </button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

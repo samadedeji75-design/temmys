@@ -1,21 +1,28 @@
 /* ==========================================================================
-   teacher-assignments.js — Teacher -> Class + Subject assignment, wired to
-   the real API. Structural pattern follows class-subjects.js.
+   teacher-assignments.js - Give one teacher a subject across many classes
+   in one action. Uses:
+     GET  /api/teachers, /api/classes, /api/subjects
+     GET  /api/subjects/<id>/availability
+     GET  /api/teachers/<id>/assignments
+     POST /api/teachers/<id>/assignments/bulk
+     DELETE /api/teacher-assignments/<id>
    ========================================================================== */
 
 $(function () {
   const $teacherPicker = $("#teacherPicker");
   const $builder = $("#assignmentBuilder");
   const $noTeacherState = $("#noTeacherSelectedState");
-  const $classArmPicker = $("#classArmPicker");
+  const $classGrid = $("#classGrid");
   const $subjectPicker = $("#subjectPicker");
-  const $addBtn = $("#addAssignmentBtn");
+  const $assignBtn = $("#assignSelectedBtn");
   const $tbody = $("#assignmentsTableBody");
   const $table = $("#assignmentsTable").closest(".table-wrapper");
   const $empty = $("#assignmentsEmptyState");
 
   let teachers = [];
-  let classArms = []; // [{id, label}]
+  let classArms = []; // [{id, label, levelId, isPrimary}]
+  let levels = [];
+  let availability = {}; // classArmId -> {offered, teacherId, teacherName}
   let subjects = [];  // [{id, name, code}]
   let assignments = [];
   let selectedTeacherId = null;
@@ -27,20 +34,82 @@ $(function () {
     });
   }
 
-  function populateClassAndSubjectPickers() {
-    $classArmPicker.empty();
-    // Primary classes get their teacher from the class teacher setting, not here.
-    const pickable = classArms.filter(function (arm) { return !arm.isPrimary; });
-    pickable.forEach(function (arm) {
-      $classArmPicker.append('<option value="' + arm.id + '">' + arm.label + "</option>");
-    });
-    const allPrimary = classArms.length > 0 && pickable.length === 0;
-    $("#primaryOnlyHint").prop("hidden", !allPrimary);
-    $addBtn.prop("disabled", pickable.length === 0);
+  function populateSubjectPicker() {
     $subjectPicker.empty();
     subjects.forEach(function (s) {
-      $subjectPicker.append('<option value="' + s.id + '">' + s.name + "</option>");
+      $subjectPicker.append($("<option>").val(s.id).text(s.name));
     });
+    const secondary = classArms.filter(function (arm) { return !arm.isPrimary; });
+    $("#primaryOnlyHint").prop("hidden", !(classArms.length > 0 && secondary.length === 0));
+  }
+
+  function loadAvailability() {
+    const subjectId = Number($subjectPicker.val());
+    availability = {};
+    if (!subjectId) {
+      renderClassGrid();
+      return;
+    }
+    window.apiRequest("GET", "/api/subjects/" + subjectId + "/availability").done(function (data) {
+      if (!data || !data.success) return;
+      data.arms.forEach(function (item) { availability[item.classArmId] = item; });
+      renderClassGrid();
+    });
+  }
+
+  // Disabled states: not offered, held by another teacher, or already mine.
+  function stateFor(arm) {
+    const info = availability[arm.id];
+    if (!info || !info.offered) return { disabled: true, checked: false, hint: "Not offered" };
+    if (info.teacherId && info.teacherId === selectedTeacherId) {
+      return { disabled: true, checked: true, hint: "Already assigned" };
+    }
+    if (info.teacherId) return { disabled: true, checked: false, hint: info.teacherName };
+    return { disabled: false, checked: false, hint: "" };
+  }
+
+  function renderClassGrid() {
+    $classGrid.empty();
+    levels.forEach(function (level) {
+      if (level.section === "primary") return;
+      const levelArms = classArms.filter(function (a) { return a.levelId === level.id; });
+      if (levelArms.length === 0) return;
+
+      const $group = $('<div class="class-grid-level">').attr("data-level-id", level.id);
+      const $head = $('<div class="class-grid-level-head">');
+      $head.append($('<span class="class-grid-level-name">').text(level.name));
+      $head.append(
+        $('<button type="button" class="btn btn-outline-secondary btn-sm js-select-level">').text("Select all in this level")
+      );
+      const $items = $('<div class="class-grid-items">');
+
+      levelArms.forEach(function (arm) {
+        const st = stateFor(arm);
+        const $label = $('<label class="class-grid-item">')
+          .toggleClass("is-disabled", st.disabled)
+          .toggleClass("is-checked", st.checked);
+        const $box = $('<input type="checkbox" class="js-class-box">')
+          .val(arm.id).prop("disabled", st.disabled).prop("checked", st.checked);
+        const $text = $("<span>").append($('<span class="label">').text(arm.label));
+        if (st.hint) $text.append($('<span class="hint">').text(st.hint));
+        $items.append($label.append($box, $text));
+      });
+
+      $classGrid.append($group.append($head, $items));
+    });
+    updateAssignButton();
+  }
+
+  function selectedArmIds() {
+    return $classGrid.find(".js-class-box:checked:not(:disabled)").map(function () {
+      return Number($(this).val());
+    }).get();
+  }
+
+  function updateAssignButton() {
+    const count = selectedArmIds().length;
+    $assignBtn.prop("disabled", count === 0);
+    $("#assignSelectedLabel").text(count > 0 ? "Assign selected (" + count + ")" : "Assign selected");
   }
 
   function renderAssignments() {
@@ -97,14 +166,16 @@ $(function () {
         const level = classesData.levels.find(function (l) { return l.id === arm.levelId; });
         return {
           id: arm.id,
+          levelId: arm.levelId,
           label: (level ? level.name : "") + " " + arm.name,
           isPrimary: !!(level && level.section === "primary"),
         };
       });
+      levels = classesData.levels;
       subjects = subjectsData.subjects;
 
       populateTeacherPicker();
-      populateClassAndSubjectPickers();
+      populateSubjectPicker();
 
       // Deep-link support: /admin/assignments?teacherId=<id> from the
       // "Manage Assignments" row action on the teachers list.
@@ -128,28 +199,63 @@ $(function () {
     $builder.prop("hidden", false);
     $noTeacherState.hide();
     loadAssignments();
+    loadAvailability();
   });
 
-  $addBtn.on("click", function () {
+  $subjectPicker.on("change", loadAvailability);
+
+  $classGrid.on("change", ".js-class-box", function () {
+    $(this).closest(".class-grid-item").toggleClass("is-checked", this.checked);
+    updateAssignButton();
+  });
+
+  $classGrid.on("click", ".js-select-level", function () {
+    const $boxes = $(this).closest(".class-grid-level").find(".js-class-box:not(:disabled)");
+    $boxes.prop("checked", true).closest(".class-grid-item").addClass("is-checked");
+    updateAssignButton();
+  });
+
+  const REASON_TEXT = {
+    arm_not_found: "class not found",
+    subject_not_found: "subject not found",
+    primary_arm: "primary class",
+    not_offered: "subject not offered",
+    already_assigned: "already assigned",
+    taken: "already taken"
+  };
+
+  $assignBtn.on("click", function () {
     if (!selectedTeacherId) return;
-    const classArmId = Number($classArmPicker.val());
     const subjectId = Number($subjectPicker.val());
-    if (!classArmId || !subjectId) return;
+    const armIds = selectedArmIds();
+    if (!subjectId || armIds.length === 0) return;
 
-    $addBtn.prop("disabled", true).find(".btn-spinner").show();
+    $assignBtn.prop("disabled", true).find(".btn-spinner").show();
 
-    window.apiRequest("POST", "/api/teachers/" + selectedTeacherId + "/assignments", {
-      classArmId: classArmId,
-      subjectId: subjectId,
+    window.apiRequest("POST", "/api/teachers/" + selectedTeacherId + "/assignments/bulk", {
+      subjectIds: [subjectId],
+      classArmIds: armIds
     })
       .done(function (response) {
-        if (response && response.success) {
-          loadAssignments();
-          window.showToast("Assignment added.", "success");
+        if (!response || !response.success) return;
+        const created = response.created.length;
+        const skipped = response.skipped || [];
+        let message = created + (created === 1 ? " assignment added." : " assignments added.");
+        if (skipped.length) {
+          const reasons = skipped.slice(0, 4).map(function (item) {
+            return (item.className || "Class") + ": " + (REASON_TEXT[item.reason] || item.reason) +
+              (item.detail ? " (" + item.detail + ")" : "");
+          });
+          message += " Skipped " + skipped.length + ": " + reasons.join("; ") +
+            (skipped.length > 4 ? "; and more." : ".");
         }
+        window.showToast(message, created > 0 ? "success" : "danger");
+        loadAssignments();
+        loadAvailability();
       })
       .always(function () {
-        $addBtn.prop("disabled", false).find(".btn-spinner").hide();
+        $assignBtn.find(".btn-spinner").hide();
+        updateAssignButton();
       });
   });
 
@@ -168,6 +274,7 @@ $(function () {
         window.apiRequest("DELETE", "/api/teacher-assignments/" + id).done(function (response) {
           if (response && response.success) {
             loadAssignments();
+            loadAvailability();
             window.showToast("Assignment removed.", "success");
           }
         });

@@ -132,6 +132,16 @@ $(function () {
         });
       });
 
+      row.querySelector(".js-transfer-teacher").addEventListener("click", function () {
+        closeAllDropdowns();
+        openTransfer(t);
+      });
+
+      row.querySelector(".js-clear-teacher").addEventListener("click", function () {
+        closeAllDropdowns();
+        clearTeacher(t);
+      });
+
       row.querySelector(".js-deactivate-teacher").addEventListener("click", function () {
         closeAllDropdowns();
         const willDeactivate = t.isActive;
@@ -146,6 +156,17 @@ $(function () {
                 if (response && response.success) {
                   loadTeachers();
                   window.showToast(t.fullName + (willDeactivate ? " deactivated." : " reactivated."), "success");
+                  if (willDeactivate && response.hasAssignments) {
+                    // Deactivating never clears assignments; offer the hand over.
+                    setTimeout(function () {
+                      window.confirmAction({
+                        title: "Transfer assignments?",
+                        body: "This teacher still has assignments. Transfer them now?",
+                        confirmLabel: "Transfer now",
+                        onConfirm: function () { openTransfer(t); }
+                      });
+                    }, 250);
+                  }
                 }
               });
           }
@@ -154,6 +175,104 @@ $(function () {
 
       $tbody.append(row);
     });
+  }
+
+  /* ---------------- Transfer and clear assignments ---------------- */
+
+  const $transferModal = $("#transferModal");
+  const $transferSelect = $("#transferTargetSelect");
+  let transferSource = null;
+
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+
+  function updateTransferSummary() {
+    if (!transferSource) return;
+    const targetId = Number($transferSelect.val());
+    const target = teachers.find(function (x) { return x.id === targetId; });
+    const roles = (transferSource.classTeacherOf || []).length;
+    $("#transferSummary").text(
+      "Move " + plural(transferSource.manualAssignmentCount || 0, "subject assignment", "subject assignments") +
+      " and " + plural(roles, "class teacher role", "class teacher roles") +
+      " from " + transferSource.fullName + " to " + (target ? target.fullName : "the chosen teacher") + "."
+    );
+  }
+
+  function openTransfer(teacher) {
+    transferSource = teacher;
+    $("#transferModalTitle").text("Transfer assignments from " + teacher.fullName);
+    $transferSelect.empty();
+    const others = teachers.filter(function (x) { return x.isActive && x.id !== teacher.id; });
+    others.forEach(function (x) {
+      $transferSelect.append($("<option>").val(x.id).text(x.fullName));
+    });
+    if (others.length === 0) {
+      window.showToast("There is no other active teacher to transfer to.", "danger");
+      return;
+    }
+    updateTransferSummary();
+    window.openModal($transferModal);
+  }
+
+  $transferSelect.on("change", updateTransferSummary);
+
+  $("#transferConfirmBtn").on("click", function () {
+    if (!transferSource) return;
+    const source = transferSource;
+    const targetId = Number($transferSelect.val());
+    const target = teachers.find(function (x) { return x.id === targetId; });
+    if (!target) return;
+    window.closeModal($transferModal);
+    window.confirmAction({
+      title: "Transfer assignments?",
+      body: $("#transferSummary").text() + " " + source.fullName + " will lose access to enter those scores.",
+      confirmLabel: "Transfer",
+      danger: true,
+      onConfirm: function () {
+        window.apiRequest("POST", "/api/teachers/" + source.id + "/transfer-assignments", { toTeacherId: target.id })
+          .done(function (response) {
+            if (response && response.success) {
+              loadTeachers();
+              let message = "Moved " + plural(response.movedAssignments, "assignment", "assignments") +
+                " and " + plural(response.movedClassTeacherRoles, "class teacher role", "class teacher roles") + ".";
+              if (response.skippedDuplicates) {
+                message += " " + plural(response.skippedDuplicates, "duplicate was", "duplicates were") + " skipped.";
+              }
+              window.showToast(message, "success");
+            }
+          });
+      }
+    });
+  });
+
+  function clearTeacher(teacher) {
+    window.apiRequest("POST", "/api/teachers/" + teacher.id + "/clear-assignments", {})
+      .fail(function (xhr) {
+        const data = xhr.responseJSON || {};
+        if (xhr.status !== 409 || data.code !== "confirm_clear") return;
+        const roles = data.classTeacherOf || [];
+        if (!data.manualCount && roles.length === 0) {
+          window.showToast("Nothing to clear.", "success");
+          return;
+        }
+        window.confirmAction({
+          title: "Clear assignments for " + teacher.fullName + "?",
+          body: "This removes " + plural(data.manualCount, "subject assignment", "subject assignments") +
+            (roles.length ? " and the class teacher role for " + roles.join(", ") +
+              " (including the subjects it gave them)" : "") +
+            ". Scores already entered are kept.",
+          confirmLabel: "Clear assignments",
+          danger: true,
+          onConfirm: function () {
+            window.apiRequest("POST", "/api/teachers/" + teacher.id + "/clear-assignments", { confirm: true })
+              .done(function (response) {
+                if (response && response.success) {
+                  loadTeachers();
+                  window.showToast("Assignments cleared.", "success");
+                }
+              });
+          }
+        });
+      });
   }
 
   function closeAllDropdowns() {

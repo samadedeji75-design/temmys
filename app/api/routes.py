@@ -45,6 +45,12 @@ from app.services.assignments import (
     sync_primary_arm,
     describe_primary_replacement,
     convert_arm_automatic_to_manual,
+    MAX_BULK_PAIRS,
+    bulk_assign,
+    describe_teacher_workload,
+    teacher_has_assignments,
+    clear_teacher_assignments,
+    transfer_teacher_assignments,
 )
 from app.services.results import (
     get_required_subjects,
@@ -136,6 +142,7 @@ def serialize_teacher(teacher):
         "emailIsPlaceholder": teacher.email.endswith("@placeholder.local"),
         "isActive": teacher.is_active,
         "assignmentCount": len(teacher.assignments),
+        "manualAssignmentCount": sum(1 for a in teacher.assignments if a.source != SOURCE_CLASS_TEACHER),
         "classTeacherOf": sorted(
             arm.display_name for arm in ClassArm.query.filter_by(class_teacher_id=teacher.id).all()
         ),
@@ -695,6 +702,36 @@ def create_subject():
     return jsonify({"success": True, "subject": serialize_subject(subject)}), 201
 
 
+@api_bp.route("/subjects/<int:subject_id>/availability", methods=["GET"])
+@api_admin_required
+def subject_availability(subject_id):
+    """For the multi-select builder: for one subject, which classes offer it
+    and which teacher holds it in each class (first by id if legacy data has
+    several)."""
+    subject = Subject.query.get_or_404(subject_id)
+    offered = {
+        cs.class_arm_id
+        for cs in ClassSubject.query.filter_by(subject_id=subject.id).all()
+    }
+    holders = {}
+    for row in (
+        TeacherSubjectAssignment.query.filter_by(subject_id=subject.id)
+        .order_by(TeacherSubjectAssignment.id)
+        .all()
+    ):
+        holders.setdefault(row.class_arm_id, row)
+    arms = []
+    for arm in ClassArm.query.all():
+        holder = holders.get(arm.id)
+        arms.append({
+            "classArmId": arm.id,
+            "offered": arm.id in offered,
+            "teacherId": holder.teacher_id if holder else None,
+            "teacherName": holder.teacher.full_name if holder else None,
+        })
+    return jsonify({"success": True, "subjectId": subject.id, "arms": arms})
+
+
 @api_bp.route("/subjects/<int:subject_id>", methods=["PUT"])
 @api_admin_required
 def update_subject(subject_id):
@@ -1241,7 +1278,11 @@ def deactivate_teacher(teacher_id):
     else:
         teacher.is_active = False
     db.session.commit()
-    return jsonify({"success": True, "teacher": serialize_teacher(teacher)})
+    return jsonify({
+        "success": True,
+        "teacher": serialize_teacher(teacher),
+        "hasAssignments": teacher_has_assignments(teacher),
+    })
 
 
 @api_bp.route("/teachers/<int:teacher_id>/reset-password", methods=["POST"])
@@ -1393,6 +1434,132 @@ def delete_teacher_assignment(assignment_id):
     db.session.delete(assignment)
     db.session.commit()
     return jsonify({"success": True})
+
+
+def _parse_id_list(value):
+    """A non-empty list of positive integers (duplicates dropped, order kept),
+    or None if the value is not one. Booleans are not accepted as ids."""
+    if not isinstance(value, list) or not value:
+        return None
+    ids = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int) or item < 1:
+            return None
+        if item not in ids:
+            ids.append(item)
+    return ids
+
+
+@api_bp.route("/teachers/<int:teacher_id>/assignments/bulk", methods=["POST"])
+@api_admin_required
+def bulk_create_teacher_assignments(teacher_id):
+    teacher = Teacher.query.get_or_404(teacher_id)
+    if not teacher.is_active:
+        return jsonify({"success": False, "message": "That teacher is inactive."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    subject_ids = _parse_id_list(payload.get("subjectIds"))
+    class_arm_ids = _parse_id_list(payload.get("classArmIds"))
+    if subject_ids is None or class_arm_ids is None:
+        return jsonify({
+            "success": False,
+            "message": "Choose at least one subject and one class.",
+        }), 400
+    if len(subject_ids) * len(class_arm_ids) > MAX_BULK_PAIRS:
+        return jsonify({"success": False, "message": "Too many selections at once."}), 400
+
+    try:
+        created, skipped = bulk_assign(teacher, subject_ids, class_arm_ids)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Bulk assignment failed")
+        return jsonify({"success": False, "message": "Could not save the assignments."}), 500
+
+    skipped_out = []
+    for item in skipped:
+        arm = ClassArm.query.get(item["classArmId"])
+        subject = Subject.query.get(item["subjectId"])
+        skipped_out.append({
+            **item,
+            "className": arm.display_name if arm else None,
+            "subjectName": subject.name if subject else None,
+        })
+    return jsonify({
+        "success": True,
+        "created": [
+            {
+                "classArmId": row.class_arm_id,
+                "className": row.class_arm.display_name,
+                "subjectId": row.subject_id,
+                "subjectName": row.subject.name,
+                "assignmentId": row.id,
+            }
+            for row in created
+        ],
+        "skipped": skipped_out,
+    })
+
+
+@api_bp.route("/teachers/<int:teacher_id>/clear-assignments", methods=["POST"])
+@api_admin_required
+def clear_teacher_assignments_route(teacher_id):
+    teacher = Teacher.query.get_or_404(teacher_id)
+    payload = request.get_json(silent=True) or {}
+
+    if payload.get("confirm") is not True:
+        workload = describe_teacher_workload(teacher)
+        return jsonify({
+            "success": False,
+            "code": "confirm_clear",
+            "message": "This removes the teacher's assignments and class teacher roles.",
+            "manualCount": workload["manualCount"],
+            "classTeacherOf": workload["classTeacherOf"],
+        }), 409
+
+    try:
+        removed, roles = clear_teacher_assignments(teacher)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Clearing teacher assignments failed")
+        return jsonify({"success": False, "message": "Could not clear the assignments."}), 500
+    return jsonify({
+        "success": True,
+        "removedAssignments": removed,
+        "clearedClassTeacherRoles": roles,
+    })
+
+
+@api_bp.route("/teachers/<int:teacher_id>/transfer-assignments", methods=["POST"])
+@api_admin_required
+def transfer_teacher_assignments_route(teacher_id):
+    source = Teacher.query.get_or_404(teacher_id)
+    payload = request.get_json(silent=True) or {}
+    to_id = payload.get("toTeacherId")
+    if isinstance(to_id, bool) or not isinstance(to_id, int):
+        return jsonify({"success": False, "message": "Choose a teacher to transfer to."}), 400
+    if to_id == source.id:
+        return jsonify({"success": False, "message": "Choose a different teacher."}), 400
+    destination = Teacher.query.get(to_id)
+    if destination is None:
+        return jsonify({"success": False, "message": "Teacher not found."}), 404
+    if not destination.is_active:
+        return jsonify({"success": False, "message": "That teacher is inactive."}), 400
+
+    try:
+        moved, roles, skipped = transfer_teacher_assignments(source, destination)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Transfer of assignments failed")
+        return jsonify({"success": False, "message": "Could not transfer the assignments."}), 500
+    return jsonify({
+        "success": True,
+        "movedAssignments": moved,
+        "movedClassTeacherRoles": roles,
+        "skippedDuplicates": skipped,
+    })
 
 
 # ---------------------------------------------------------------------------

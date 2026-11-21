@@ -306,3 +306,156 @@ def removal_details(arm, subject_ids):
                 "scoreCount": score_count,
             })
     return details
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: bulk assign, transfer and clear for one teacher
+# ---------------------------------------------------------------------------
+
+MAX_BULK_PAIRS = 200
+
+
+def bulk_assign(teacher, subject_ids, class_arm_ids):
+    """Give teacher every (arm, subject) pair of the cross product that is
+    allowed. Does not commit. Returns (created_rows, skipped) where skipped is
+    a list of {classArmId, subjectId, reason, detail?}.
+
+    Pairs are skipped, never failed, so one bad pair cannot block the rest.
+    """
+    from app.models import Subject, SECTION_SECONDARY
+
+    arms = {a.id: a for a in ClassArm.query.filter(ClassArm.id.in_(class_arm_ids)).all()}
+    subjects = {s.id: s for s in Subject.query.filter(Subject.id.in_(subject_ids)).all()}
+    offered = {
+        (cs.class_arm_id, cs.subject_id)
+        for cs in ClassSubject.query.filter(ClassSubject.class_arm_id.in_(class_arm_ids)).all()
+    }
+    holders = {}
+    for row in (
+        TeacherSubjectAssignment.query.filter(
+            TeacherSubjectAssignment.class_arm_id.in_(class_arm_ids)
+        )
+        .order_by(TeacherSubjectAssignment.id)
+        .all()
+    ):
+        holders.setdefault((row.class_arm_id, row.subject_id), []).append(row)
+
+    created = []
+    skipped = []
+    for arm_id in class_arm_ids:
+        for subject_id in subject_ids:
+            arm = arms.get(arm_id)
+            subject = subjects.get(subject_id)
+            entry = {"classArmId": arm_id, "subjectId": subject_id}
+            if arm is None:
+                skipped.append({**entry, "reason": "arm_not_found"})
+                continue
+            if subject is None:
+                skipped.append({**entry, "reason": "subject_not_found"})
+                continue
+            if arm.class_level.section != SECTION_SECONDARY:
+                skipped.append({**entry, "reason": "primary_arm"})
+                continue
+            if (arm_id, subject_id) not in offered:
+                skipped.append({**entry, "reason": "not_offered"})
+                continue
+            current = holders.get((arm_id, subject_id), [])
+            if any(r.teacher_id == teacher.id for r in current):
+                skipped.append({**entry, "reason": "already_assigned"})
+                continue
+            if current:
+                skipped.append({
+                    **entry,
+                    "reason": "taken",
+                    "detail": current[0].teacher.full_name,
+                })
+                continue
+            row = TeacherSubjectAssignment(
+                teacher_id=teacher.id,
+                class_arm_id=arm_id,
+                subject_id=subject_id,
+                source=SOURCE_MANUAL,
+            )
+            db.session.add(row)
+            holders[(arm_id, subject_id)] = [row]
+            created.append(row)
+    db.session.flush()
+    return created, skipped
+
+
+def describe_teacher_workload(teacher):
+    """What a clear or transfer would touch: the manual rows the teacher holds
+    and the classes they are class teacher of."""
+    manual_count = TeacherSubjectAssignment.query.filter_by(
+        teacher_id=teacher.id, source=SOURCE_MANUAL
+    ).count()
+    arms = ClassArm.query.filter_by(class_teacher_id=teacher.id).all()
+    return {
+        "manualCount": manual_count,
+        "classTeacherOf": sorted(a.display_name for a in arms),
+        "classTeacherArms": arms,
+    }
+
+
+def teacher_has_assignments(teacher):
+    """True if the teacher holds any assignment row or is a class teacher."""
+    if TeacherSubjectAssignment.query.filter_by(teacher_id=teacher.id).first() is not None:
+        return True
+    return ClassArm.query.filter_by(class_teacher_id=teacher.id).first() is not None
+
+
+def clear_teacher_assignments(teacher):
+    """Remove the teacher's manual rows and class teacher roles. Does not
+    commit. Primary arms are re-synced so the automatic rows go too (I5).
+    Returns (removed_manual_rows, cleared_roles). Scores are untouched."""
+    arms = ClassArm.query.filter_by(class_teacher_id=teacher.id).all()
+    for arm in arms:
+        arm.class_teacher_id = None
+    db.session.flush()
+    for arm in arms:
+        sync_primary_arm(arm)
+    removed = TeacherSubjectAssignment.query.filter_by(
+        teacher_id=teacher.id, source=SOURCE_MANUAL
+    ).delete(synchronize_session=False)
+    db.session.flush()
+    return removed, len(arms)
+
+
+def transfer_teacher_assignments(source, destination):
+    """Hand all of source's work to destination. Does not commit.
+
+    1. Class teacher roles move over; primary arms are re-synced so their
+       automatic rows are re-owned by the destination.
+    2. Remaining manual rows move, unless the destination already holds the
+       same (class, subject), in which case the source row is dropped.
+    Returns (moved_assignments, moved_roles, skipped_duplicates).
+    """
+    arms = ClassArm.query.filter_by(class_teacher_id=source.id).all()
+    for arm in arms:
+        arm.class_teacher_id = destination.id
+    db.session.flush()
+    for arm in arms:
+        sync_primary_arm(arm)
+    db.session.flush()
+
+    destination_keys = {
+        (r.class_arm_id, r.subject_id)
+        for r in TeacherSubjectAssignment.query.filter_by(teacher_id=destination.id).all()
+    }
+    moved = 0
+    skipped = 0
+    for row in (
+        TeacherSubjectAssignment.query.filter_by(teacher_id=source.id, source=SOURCE_MANUAL)
+        .order_by(TeacherSubjectAssignment.id)
+        .all()
+    ):
+        key = (row.class_arm_id, row.subject_id)
+        if key in destination_keys:
+            db.session.delete(row)
+            skipped += 1
+        else:
+            row.teacher_id = destination.id
+            destination_keys.add(key)
+            moved += 1
+    db.session.flush()
+    return moved, len(arms), skipped
